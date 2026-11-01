@@ -1,0 +1,42 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC approvals
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted, dismissed]
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: opensdlc-approvals-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  approvals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Judge with the base branch's OpenSDLC
+        run: |
+          rm -rf .opensdlc
+          git checkout "$BASE" -- .opensdlc
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - name: Every proposed acceptance has its approvals
+        run: python -P -m opensdlc approvals --pr "$PR" --base "$BASE"
+        env:
+          PYTHONPATH: .opensdlc/cli
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OPENSDLC_ORG_TOKEN: ${{ secrets.OPENSDLC_ORG_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.pull_request.base.sha }}

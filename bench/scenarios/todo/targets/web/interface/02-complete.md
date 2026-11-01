@@ -1,0 +1,1 @@
+- Each `todo-item` has a `complete-todo` button that marks it done.

@@ -1,0 +1,2 @@
+- `TodoList.add(title, due=None)` takes the due date as a `"YYYY-MM-DD"` string.
+- Every todo has a `due` attribute: the `"YYYY-MM-DD"` string, or `None`.

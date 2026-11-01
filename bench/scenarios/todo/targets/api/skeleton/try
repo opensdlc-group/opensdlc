@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -u
+port=$((20000 + RANDOM % 20000))
+log=$(mktemp)
+PORT=$port npm start --silent >"$log" 2>&1 &
+server=$!
+trap 'kill $server 2>/dev/null; rm -f "$log"' EXIT
+for _ in $(seq 100); do curl -s -o /dev/null "http://localhost:$port/health" && break; sleep 0.1; done
+if ! curl -s -o /dev/null "http://localhost:$port/health"; then
+  echo "The server did not start:"
+  tail -n 20 "$log"
+  exit 1
+fi
+for request in "$@"; do
+  read -r method path body <<<"$request"
+  echo "> $request"
+  curl -s -w '\n< %{http_code}\n' -X "$method" -H 'content-type: application/json' ${body:+--data "$body"} "http://localhost:$port$path"
+done

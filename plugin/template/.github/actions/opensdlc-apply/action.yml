@@ -1,0 +1,58 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC apply
+description: Check an agent's patch from a read-only run against the untouched checkout, then apply it
+inputs:
+  name:
+    description: Artifact the agent job uploaded
+    required: true
+  change:
+    description: The change id the run worked on, or 'new' when it may create one change folder
+    required: true
+  allow:
+    description: Comma-separated globs the patch may touch; empty allows any path a human need not change
+    required: false
+    default: ""
+outputs:
+  escalated:
+    description: Whether the agent escalated
+    value: ${{ steps.apply.outputs.escalated }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      with:
+        python-version: "3.12"
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ runner.temp }}/agent-out
+    - name: Check the patch before anything in it reaches the workspace
+      shell: bash
+      env:
+        PYTHONPATH: .opensdlc/cli
+        ALLOW: ${{ inputs.allow }}
+        CHANGE: ${{ inputs.change }}
+      run: |
+        patch="$RUNNER_TEMP/agent-out/opensdlc.patch"
+        export GIT_INDEX_FILE="$RUNNER_TEMP/agent.index"
+        git read-tree HEAD
+        if [ -s "$patch" ]; then
+          git apply --cached "$patch"
+        fi
+        python -P -m opensdlc patch-check --allow "$ALLOW" --change "$CHANGE"
+    - id: apply
+      shell: bash
+      run: |
+        out="$RUNNER_TEMP/agent-out"
+        if [ -s "$out/opensdlc.patch" ]; then
+          git apply --index "$out/opensdlc.patch"
+        fi
+        mkdir -p .opensdlc/out
+        find "$out" -maxdepth 1 -type f ! -name opensdlc.patch -exec cp {} .opensdlc/out/ \;
+        if [ -f .opensdlc/out/escalate.md ]; then
+          echo "escalated=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "escalated=false" >> "$GITHUB_OUTPUT"
+        fi

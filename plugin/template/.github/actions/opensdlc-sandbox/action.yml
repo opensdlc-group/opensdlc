@@ -1,0 +1,37 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC sandbox
+description: Prepare a runner for an agent job that runs read-only and sandboxed
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      with:
+        python-version: "3.12"
+    - name: Install the Claude Code sandbox dependencies
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq bubblewrap socat
+        if [ -f /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+        fi
+    - name: Hide the sandbox's placeholder files from git
+      shell: bash
+      run: |
+        cat >> .git/info/exclude <<'EOF'
+        .bash_profile
+        .bashrc
+        .claude.json
+        .gitconfig
+        .gitmodules
+        .idea
+        .mcp.json
+        .profile
+        .ripgreprc
+        .vscode
+        .zprofile
+        .zshrc
+        CLAUDE.local.md
+        EOF

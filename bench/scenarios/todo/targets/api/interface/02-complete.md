@@ -1,0 +1,1 @@
+- `POST /todos/:id/complete` answers 200 with the todo after marking it done.

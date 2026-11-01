@@ -1,0 +1,55 @@
+{
+  "env": {
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1"
+  },
+  "disableBundledSkills": true,
+  "permissions": {
+    "disableBypassPermissionsMode": "disable",
+    "deny": [
+      "Edit(.github/**)",
+      "Edit(.claude/**)",
+      "Edit(**/.claude/**)",
+      "Edit(.claude.json)",
+      "Edit(.mcp.json)",
+      "Edit(.opensdlc/cli/**)",
+      "Edit(.opensdlc/*.json)",
+      "Edit(AGENTS.md)",
+      "Edit(**/AGENTS.md)",
+      "Edit(CLAUDE.md)",
+      "Edit(**/CLAUDE.md)",
+      "Edit(CLAUDE.local.md)",
+      "Edit(**/CLAUDE.local.md)",
+      "Read(~/.ssh/**)",
+      "Read(~/.config/**)",
+      "Read(~/.docker/**)",
+      "Read(~/.claude/.credentials.json)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "autoAllowBashIfSandboxed": false,
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "objects.githubusercontent.com",
+        "registry.npmjs.org",
+        "pypi.org",
+        "files.pythonhosted.org"
+      ]
+    },
+    "credentials": {
+      "envVars": [
+        { "name": "ANTHROPIC_API_KEY", "mode": "deny" },
+        { "name": "CLAUDE_CODE_OAUTH_TOKEN", "mode": "deny" },
+        { "name": "GH_TOKEN", "mode": "deny" },
+        { "name": "GITHUB_TOKEN", "mode": "deny" },
+        { "name": "ACTIONS_RUNTIME_TOKEN", "mode": "deny" },
+        { "name": "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "mode": "deny" },
+        { "name": "ACTIONS_ID_TOKEN_REQUEST_URL", "mode": "deny" }
+      ]
+    }
+  }
+}

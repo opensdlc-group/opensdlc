@@ -1,0 +1,9 @@
+/.github/               @YOUR-ORG/platform
+/.claude/               @YOUR-ORG/platform
+/.opensdlc/             @YOUR-ORG/platform
+/evals/                 @YOUR-ORG/platform
+/CLAUDE.md              @YOUR-ORG/tech-leads
+/REVIEW.md              @YOUR-ORG/tech-leads
+/knowledge/             @YOUR-ORG/tech-leads
+/docs/adr/              @YOUR-ORG/tech-leads
+/GLOSSARY.md            @YOUR-ORG/product-owners

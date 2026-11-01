@@ -1,0 +1,1 @@
+- Every `todo-item` contains a `todo-position` element showing its place in the list: 1 for the first, 2 for the next. Ids don't change.

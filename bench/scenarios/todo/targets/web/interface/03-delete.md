@@ -1,0 +1,1 @@
+- Each `todo-item` has a `delete-todo` button that removes it.

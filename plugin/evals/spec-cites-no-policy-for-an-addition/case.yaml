@@ -1,0 +1,33 @@
+schema_version: '1.1'
+name: spec-cites-no-policy-for-an-addition
+description: Clearing finished todos only adds a command, which the public-contract policy allows. The spec goes ahead without citing the policy, so its owner is not pulled into the approval.
+tags:
+- spec
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 80
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: /opensdlc:spec changes/2026-10-clear-out-finished-todos (write, headless)
+graders:
+- name: did-not-escalate
+  type: file_exists
+  path: .opensdlc/out/escalate.md
+  exists: false
+- name: wrote-the-spec
+  type: file_exists
+  path: changes/2026-10-clear-out-finished-todos/spec.md
+- name: cites-no-policy
+  type: regex
+  match: not_contains
+  pattern: '\(policy:'
+  target:
+    source: file
+    path: changes/2026-10-clear-out-finished-todos/spec.md

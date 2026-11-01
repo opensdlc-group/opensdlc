@@ -1,0 +1,1 @@
+- `TodoList.delete(id)` returns `None`.

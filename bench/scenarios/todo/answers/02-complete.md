@@ -1,0 +1,2 @@
+- There is no way to mark a todo not done again. Nobody asked for it.
+- "Done" is just a flag; we don't need to record when.

@@ -1,0 +1,23 @@
+name: Change proposal
+description: Propose a new feature or a change to how a stage, skill or workflow works
+labels: [proposal]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What goes wrong or is missing today, for whom, and how often.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What you would change. Which part of the playbook it implements, if any.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How we would know it worked
+      description: The bench metric, eval case or indicator you expect to move, and in which direction.

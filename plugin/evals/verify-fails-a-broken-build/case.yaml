@@ -1,0 +1,31 @@
+schema_version: '1.1'
+name: verify-fails-a-broken-build
+description: The same build with clear keeping the done todos and removing the rest, so its own tests fail. Verification reports FAIL and names the failing tests.
+tags:
+- verify
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 40
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: /opensdlc:verify changes/2026-10-clear-out-finished-todos (headless)
+graders:
+- name: fails
+  type: regex
+  pattern: ^FAIL
+  target:
+    source: file
+    path: .opensdlc/out/verify.md
+- name: names-the-failing-tests
+  type: regex
+  pattern: test_clear
+  target:
+    source: file
+    path: .opensdlc/out/verify.md

@@ -1,0 +1,36 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC plugin
+description: Check out the OpenSDLC plugin at the repository and ref .opensdlc/config.json pins, outside the workspace
+inputs:
+  token:
+    description: A token that can read the plugin repository, when it is private
+    required: false
+outputs:
+  dir:
+    description: The plugin directory, for claude --plugin-dir
+    value: ${{ steps.place.outputs.dir }}
+  pin:
+    description: The pinned repository and ref, as owner/name@ref
+    value: ${{ steps.pin.outputs.pin }}
+runs:
+  using: composite
+  steps:
+    - id: pin
+      shell: bash
+      env:
+        PYTHONPATH: .opensdlc/cli
+      run: python3 -P -m opensdlc plugin
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      with:
+        repository: ${{ steps.pin.outputs.repository }}
+        ref: ${{ steps.pin.outputs.ref }}
+        token: ${{ inputs.token || github.token }}
+        path: .opensdlc-plugin-checkout
+        persist-credentials: false
+    - id: place
+      shell: bash
+      run: |
+        mv .opensdlc-plugin-checkout "$RUNNER_TEMP/opensdlc-plugin"
+        echo "dir=$RUNNER_TEMP/opensdlc-plugin/plugin" >> "$GITHUB_OUTPUT"

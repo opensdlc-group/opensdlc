@@ -1,0 +1,26 @@
+schema_version: '1.1'
+name: spec-triggers-on-a-plain-request
+description: Someone asks, in plain words, for the design of an accepted change. The spec skill is the one chosen.
+tags:
+- spec
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 80
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: The intent in changes/2026-10-clear-out-finished-todos has been accepted. Write its design the way this repository does, without asking me anything.
+graders:
+- name: chose-the-spec-skill
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:opensdlc:)?spec"'
+- name: wrote-the-spec
+  type: file_exists
+  path: changes/2026-10-clear-out-finished-todos/spec.md

@@ -1,0 +1,26 @@
+schema_version: '1.1'
+name: gate-escalates-a-resolution-the-spec-does-not-record
+description: The settled spec with one concern marked resolved whose decision appears nowhere in Implementation Decisions or the Acceptance Criteria. Code sees an ending and lets it through, so the gate
+  has to catch it.
+tags:
+- gate
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 40
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: /opensdlc:gate changes/2026-10-due-dates spec (headless)
+graders:
+- name: escalates
+  type: regex
+  pattern: '"verdict"\s*:\s*"escalate"'
+  target:
+    source: file
+    path: .opensdlc/out/gate.json

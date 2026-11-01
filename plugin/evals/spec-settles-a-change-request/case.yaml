@@ -1,0 +1,34 @@
+schema_version: '1.1'
+name: spec-settles-a-change-request
+description: A change request for due dates changes the list order but breaks no ADR. The spec goes ahead, and every Concern says whether it is resolved, carried or escalated.
+tags:
+- spec
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 80
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: /opensdlc:spec changes/2026-10-due-dates (write, headless)
+graders:
+- name: did-not-escalate
+  type: file_exists
+  path: .opensdlc/out/escalate.md
+  exists: false
+- name: wrote-the-spec
+  type: file_exists
+  path: changes/2026-10-due-dates/spec.md
+- name: every-concern-ends
+  type: regex
+  match: not_contains
+  flags: mi
+  pattern: '## Concerns\n[\s\S]*?^- (?:(?!Resolved|Carried|Escalated)[^\n])*$[\s\S]*?\n## Carried'
+  target:
+    source: file
+    path: changes/2026-10-due-dates/spec.md

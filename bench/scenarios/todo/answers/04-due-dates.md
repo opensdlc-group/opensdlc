@@ -1,0 +1,4 @@
+- Dates have no time and no time zone; treat them as plain calendar dates.
+- Dates in the past are allowed. We are not adding reminders or overdue warnings.
+- Due dates can't be changed after adding. That may come later.
+- Todos added before this change simply have no due date.

@@ -1,0 +1,2 @@
+- `TodoList.add(title)` returns the new todo.
+- `TodoList.list()` returns a list of every todo.

@@ -1,0 +1,2 @@
+- Clearing is permanent, like removing one todo.
+- No confirmation step; the count afterwards is enough.

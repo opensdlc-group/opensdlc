@@ -1,0 +1,1 @@
+- `POST /todos/clear-completed` removes every done todo and answers 200 with `{"removed": <count>}`.

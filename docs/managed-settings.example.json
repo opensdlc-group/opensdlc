@@ -1,0 +1,53 @@
+{
+  "extraKnownMarketplaces": {
+    "opensdlc": {
+      "source": { "source": "github", "repo": "opensdlc-group/opensdlc" }
+    }
+  },
+  "enabledPlugins": {
+    "opensdlc@opensdlc": true
+  },
+  "strictKnownMarketplaces": [
+    { "source": "github", "repo": "opensdlc-group/opensdlc" },
+    { "source": "github", "repo": "YOUR-ORG/approved-plugins" }
+  ],
+  "env": {
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1"
+  },
+  "allowManagedHooksOnly": true,
+  "allowManagedPermissionRulesOnly": true,
+  "permissions": {
+    "deny": [
+      "Read(.env*)",
+      "Read(./secrets/**)",
+      "Bash(curl *)",
+      "Bash(wget *)"
+    ],
+    "allow": [
+      "Bash(git *)",
+      "Bash(make build)",
+      "Bash(make test)",
+      "Bash(make lint)"
+    ],
+    "disableBypassPermissionsMode": "disable"
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "network": {
+      "allowedDomains": ["github.com", "registry.npmjs.org", "pypi.org", "files.pythonhosted.org"]
+    },
+    "credentials": {
+      "files": [
+        { "path": "~/.ssh", "mode": "deny" },
+        { "path": "~/.aws/credentials", "mode": "deny" }
+      ],
+      "envVars": [
+        { "name": "GITHUB_TOKEN", "mode": "deny" }
+      ]
+    }
+  },
+  "allowManagedMcpServersOnly": true,
+  "disableSideloadFlags": true
+}

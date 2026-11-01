@@ -1,0 +1,27 @@
+schema_version: '1.1'
+name: intent-triggers-on-a-plain-request
+description: Someone asks, in plain words, for a request to be written up for engineering. The intent skill is the one chosen.
+tags:
+- intent
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 30
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: 'A teammate asked for this: "Let me give a todo a colour so I can group them." Write it up as a change for engineering, the way this repository does it. Nobody can answer questions right now,
+    so don''t ask: record what is unclear.'
+graders:
+- name: chose-the-intent-skill
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:opensdlc:)?intent"'
+- name: wrote-an-intent
+  type: file_exists
+  path: changes/*/intent.md

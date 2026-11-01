@@ -1,0 +1,75 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: Test
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s tests
+        env:
+          PYTHONPATH: plugin/template/.opensdlc/cli
+
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "22"
+      - run: npm install -g @anthropic-ai/claude-code@2.1.316
+      - name: The marketplace and the plugin validate
+        run: |
+          claude plugin validate .
+          claude plugin validate ./plugin
+
+  workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: stable
+      - run: go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      - name: Lint the template's workflows as an adopting repository sees them
+        run: |
+          lint="$RUNNER_TEMP/template"
+          mkdir -p "$lint"
+          cp -R plugin/template/.github "$lint/"
+          cd "$lint"
+          git init -q
+          "$(go env GOPATH)/bin/actionlint"
+
+  bench-references:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "22"
+      - run: |
+          pip install playwright==1.63.0
+          python -m playwright install --with-deps chromium
+      - name: Every target's reference passes CI and every acceptance check
+        run: python bench verify

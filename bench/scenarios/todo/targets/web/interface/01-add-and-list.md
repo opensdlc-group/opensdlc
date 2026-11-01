@@ -1,0 +1,1 @@
+- `new-todo-title`, `add-todo`, and one `todo-item` per todo in list order, as the interface document describes.

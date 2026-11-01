@@ -1,0 +1,51 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC knowledge sync
+on:
+  schedule:
+    - cron: "11 3 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sync:
+    if: vars.OPENSDLC_KNOWLEDGE_REPO != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: ${{ vars.OPENSDLC_KNOWLEDGE_REPO }}
+          token: ${{ secrets.OPENSDLC_KNOWLEDGE_TOKEN || github.token }}
+          path: .opensdlc-org-knowledge
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - name: Copy the shared knowledge into knowledge/org
+        env:
+          PYTHONPATH: .opensdlc/cli
+          SOURCE: .opensdlc-org-knowledge/${{ vars.OPENSDLC_KNOWLEDGE_PATH || 'knowledge' }}
+        run: |
+          rm -rf knowledge/org
+          mkdir -p knowledge/org
+          cp -R "$SOURCE/." knowledge/org/
+          rm -rf .opensdlc-org-knowledge
+          python -P -m opensdlc skills
+      - uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        with:
+          token: ${{ secrets.OPENSDLC_PR_TOKEN }}
+          branch: opensdlc/knowledge-sync
+          title: Sync shared knowledge
+          commit-message: Sync shared knowledge from ${{ vars.OPENSDLC_KNOWLEDGE_REPO }}
+          labels: opensdlc,knowledge
+          body: |
+            Brings `knowledge/org/` up to date with `${{ vars.OPENSDLC_KNOWLEDGE_REPO }}` and regenerates the policy skills.
+
+            Each changed document needs its owner's approval (the **OpenSDLC approvals** check). Accepted specs and plans pinned to a changed document now fail **OpenSDLC checks**: reopen them, or re-pin them with `python3 -m opensdlc pin <change> --reaccept` on this branch once their owners agree the change does not affect them.

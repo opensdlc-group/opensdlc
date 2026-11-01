@@ -1,0 +1,1 @@
+- `TodoList.clear_completed()` removes every done todo and returns how many it removed, as an `int`.

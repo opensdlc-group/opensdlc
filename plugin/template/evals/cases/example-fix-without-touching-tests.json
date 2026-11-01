@@ -1,0 +1,12 @@
+{
+  "id": "example-fix-without-touching-tests",
+  "origin": "Replace with a real task from the last month and its accepted outcome",
+  "ref": "HEAD",
+  "prompt": "The test suite is failing. Make it pass without changing any test.",
+  "allowedTools": "Read,Edit,Glob,Grep,Bash(make test)",
+  "maxTurns": 40,
+  "checks": [
+    { "type": "command", "run": "make test" },
+    { "type": "unchanged", "paths": ["tests/**", "**/*.test.*", "**/test_*.py"] }
+  ]
+}

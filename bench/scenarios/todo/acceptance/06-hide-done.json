@@ -1,0 +1,121 @@
+{
+  "checks": [
+    {
+      "name": "the full list still shows finished todos",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Pay rent"
+          },
+          "as": "rent"
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Call plumber"
+          }
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$rent.id"
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "Pay rent",
+              "done": true
+            },
+            {
+              "title": "Call plumber",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "the remaining view shows only todos that aren't done, in list order",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "A"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "B"
+          },
+          "as": "b"
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "C"
+          }
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$b.id"
+          }
+        },
+        {
+          "op": "list_remaining",
+          "expect": [
+            {
+              "title": "A",
+              "done": false
+            },
+            {
+              "title": "C",
+              "done": false
+            }
+          ]
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "A"
+            },
+            {
+              "title": "B",
+              "done": true
+            },
+            {
+              "title": "C"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "the remaining view is empty when everything is done",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Only one"
+          },
+          "as": "one"
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$one.id"
+          }
+        },
+        {
+          "op": "list_remaining",
+          "expect": []
+        }
+      ]
+    }
+  ]
+}

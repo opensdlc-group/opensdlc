@@ -1,0 +1,1 @@
+- `DELETE /todos/:id` answers 204.

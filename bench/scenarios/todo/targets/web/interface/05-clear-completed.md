@@ -1,0 +1,1 @@
+- A `clear-completed` button removes every done todo, then `cleared-count` shows how many it removed.

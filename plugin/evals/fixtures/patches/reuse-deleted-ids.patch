@@ -1,0 +1,71 @@
+diff --git a/src/todo_cli/store.py b/src/todo_cli/store.py
+index 7adcd8f..d8a4a6f 100644
+--- a/src/todo_cli/store.py
++++ b/src/todo_cli/store.py
+@@ -64,7 +64,9 @@ def delete(store: dict, todo_id: int) -> int:
+ 
+ 
+ def add(store: dict, title: str) -> dict:
+-    todo = {"id": store["next_id"], "title": title, "done": False}
++    taken = {t["id"] for t in store["todos"] if type(t.get("id")) is int}
++    todo_id = next(n for n in range(1, len(taken) + 2) if n not in taken)
++    todo = {"id": todo_id, "title": title, "done": False}
+     store["todos"].append(todo)
+-    store["next_id"] = todo["id"] + 1
++    store["next_id"] = max(store["next_id"], todo_id + 1)
+     return todo
+diff --git a/tests/test_add_list.py b/tests/test_add_list.py
+index 3561daa..6a5b4e0 100644
+--- a/tests/test_add_list.py
++++ b/tests/test_add_list.py
+@@ -89,7 +89,7 @@ class AddList(unittest.TestCase):
+         self.run_todo("add", "Buy milk")
+         self.assert_refused_unchanged("add", " \n ")
+ 
+-    def test_10_id_comes_from_the_counter_not_the_list(self):
++    def test_10_new_todos_take_the_smallest_free_ids(self):
+         todos = [
+             {"id": 1, "title": "a", "done": False},
+             {"id": 2, "title": "b", "done": False},
+@@ -97,7 +97,7 @@ class AddList(unittest.TestCase):
+         self.store.write_text(json.dumps({"next_id": 5, "todos": todos}))
+         first = json.loads(self.run_todo("add", "c").stdout)
+         second = json.loads(self.run_todo("add", "d").stdout)
+-        self.assertEqual((first["id"], second["id"]), (5, 6))
++        self.assertEqual((first["id"], second["id"]), (3, 4))
+ 
+     def test_12_invalid_store_exits_1_and_is_unchanged(self):
+         for content in ("not json", '{"todos": 3}', "[]"):
+diff --git a/tests/test_delete.py b/tests/test_delete.py
+index 3b54209..15a4b57 100644
+--- a/tests/test_delete.py
++++ b/tests/test_delete.py
+@@ -70,26 +70,10 @@ class Delete(unittest.TestCase):
+         self.run_todo("delete", "2")
+         self.assert_refused_unchanged("delete", "2", code=3)
+ 
+-    def test_4_deleted_id_is_not_reissued(self):
++    def test_4_deleted_id_is_given_to_the_next_todo(self):
+         self.add_three()
+         self.run_todo("delete", "2")
+-        self.assertEqual(self.added_id(), 4)
+-
+-    def test_5_highest_deleted_id_is_not_reissued(self):
+-        self.add_three()
+-        self.run_todo("delete", "3")
+-        self.assertEqual(self.added_id(), 4)
+-        self.assertEqual(
+-            [(t["id"], t["title"]) for t in self.listed()[:2]],
+-            [(1, "Buy milk"), (2, "Walk dog")],
+-        )
+-
+-    def test_6_deleting_everything_still_does_not_reissue_ids(self):
+-        self.add_three()
+-        for todo_id in ("1", "2", "3"):
+-            self.run_todo("delete", todo_id)
+-        self.assertEqual(self.run_todo("list").stdout.strip(), "[]")
+-        self.assertEqual(self.added_id(), 4)
++        self.assertEqual(self.added_id(), 2)
+ 
+     def test_7_done_todo_can_be_deleted(self):
+         self.add_three()

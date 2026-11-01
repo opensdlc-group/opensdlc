@@ -1,0 +1,21 @@
+{
+  "name": "opensdlc",
+  "displayName": "OpenSDLC",
+  "version": "0.6.0",
+  "description": "An AI-native SDLC as a loop of committed artifacts (intent.md, spec.md, plan.md, diff, review, incident) with deterministic guardrails, human approval gates and the playbook's leading and lagging indicators. Self-contained: no other plugins required.",
+  "author": {
+    "name": "The OpenSDLC Authors"
+  },
+  "homepage": "https://github.com/opensdlc-group/opensdlc",
+  "repository": "https://github.com/opensdlc-group/opensdlc",
+  "license": "Apache-2.0",
+  "keywords": [
+    "sdlc",
+    "spec-driven",
+    "governance",
+    "hooks",
+    "review",
+    "evals",
+    "metrics"
+  ]
+}

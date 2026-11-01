@@ -1,0 +1,1 @@
+- Every todo `TodoList.list()` returns has a `position` attribute: 1 for the first in the list, 2 for the next, worked out each time. Ids don't change.

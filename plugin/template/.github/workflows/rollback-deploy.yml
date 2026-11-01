@@ -1,0 +1,43 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: rollback-deploy
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Pre-approved rollback environment
+        type: choice
+        options: [production-rollback, staging-rollback]
+        required: true
+      reason:
+        description: Why the rollback was triggered
+        required: true
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      reason:
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: rollback-${{ inputs.environment }}
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Roll back to the previous release
+        env:
+          REASON: ${{ inputs.reason }}
+          TARGET: ${{ inputs.environment }}
+        run: |
+          echo "Rollback of $TARGET requested: $REASON"
+          echo "::error::Replace this step with your platform's rollback command. The weekly drill runs it against staging-rollback."
+          exit 1

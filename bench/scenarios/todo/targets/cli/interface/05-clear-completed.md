@@ -1,0 +1,1 @@
+- `./todo clear` removes every done todo and prints `{"removed": <count>}`.

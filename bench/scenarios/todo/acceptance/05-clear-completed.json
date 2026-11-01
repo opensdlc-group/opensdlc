@@ -1,0 +1,92 @@
+{
+  "checks": [
+    {
+      "name": "clearing removes done todos and reports how many",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "A"
+          },
+          "as": "a"
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "B"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "C"
+          },
+          "as": "c"
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "D"
+          }
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$a.id"
+          }
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$c.id"
+          }
+        },
+        {
+          "op": "clear",
+          "expect": {
+            "removed": 2
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "B",
+              "done": false
+            },
+            {
+              "title": "D",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "clearing with nothing done removes nothing",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Still open"
+          }
+        },
+        {
+          "op": "clear",
+          "expect": {
+            "removed": 0
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "Still open",
+              "done": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

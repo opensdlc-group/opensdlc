@@ -1,0 +1,21 @@
+{
+  "name": "cli",
+  "description": "A command-line program",
+  "stack": "Python 3.12, standard library only",
+  "setup": [],
+  "buildTools": "Bash(./todo *),Bash(TODO_FILE=* ./todo *),Bash(python3 -m unittest *)",
+  "adapter": {
+    "type": "cli",
+    "command": ["./todo"],
+    "stateFile": "TODO_FILE",
+    "exitCodes": {"2": "invalid", "3": "not_found"},
+    "ops": {
+      "add": ["add", "{title}", ["--due", "{due}"]],
+      "list": ["list"],
+      "complete": ["done", "{id}"],
+      "delete": ["delete", "{id}"],
+      "clear": ["clear"],
+      "list_remaining": ["list", "--remaining"]
+    }
+  }
+}

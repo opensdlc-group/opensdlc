@@ -1,0 +1,1 @@
+- `TodoList.remaining()` returns the same kind of list as `TodoList.list()`, with only the todos that aren't done, in list order.

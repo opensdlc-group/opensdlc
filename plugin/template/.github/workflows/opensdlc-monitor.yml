@@ -1,0 +1,186 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC monitor
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      matrix: ${{ steps.bands.outputs.matrix }}
+      count: ${{ steps.bands.outputs.count }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - id: bands
+        run: python -P -m opensdlc monitor
+        env:
+          PYTHONPATH: .opensdlc/cli
+          GH_TOKEN: ${{ github.token }}
+
+  agent:
+    needs: detect
+    if: needs.detect.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: opensdlc-monitor-${{ matrix.monitor }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect.outputs.matrix) }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 50
+          persist-credentials: false
+      - uses: ./.github/actions/opensdlc-sandbox
+      - name: Gather the evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONITOR: ${{ matrix.monitor }}
+          BREACH: ${{ toJSON(matrix) }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          evidence=.opensdlc/out/evidence
+          mkdir -p "$evidence"
+          printf '%s\n' "$BREACH" > ".opensdlc/out/evidence-$MONITOR.json"
+          workflow=$(jq -r '.metrics.ciWorkflow // "CI"' .opensdlc/config.json)
+          gh run list --workflow "$workflow" --branch "$BRANCH" --event push --limit 50 --json databaseId,conclusion,headSha,headBranch,event,createdAt,displayTitle > "$evidence/runs.json"
+          for id in $(jq -r '[.[] | select(.conclusion == "failure")][:3][].databaseId' "$evidence/runs.json"); do
+            gh run view "$id" --log-failed | tail -c 200000 > "$evidence/run-$id.log"
+          done
+          gh pr list --state merged --limit 30 --json number,title,mergedAt,author,headRefName > "$evidence/merged-prs.json"
+      - name: Keep a pristine git directory
+        run: cp -a .git "$RUNNER_TEMP/pristine.git"
+      - id: plugin
+        uses: ./.github/actions/opensdlc-plugin
+        with:
+          token: ${{ secrets.OPENSDLC_PLUGIN_TOKEN }}
+      - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          settings: .opensdlc/ci-settings.json
+          prompt: /opensdlc:incident .opensdlc/out/evidence-${{ matrix.monitor }}.json ${{ matrix.action }} headless
+          claude_args: >-
+            --plugin-dir "${{ steps.plugin.outputs.dir }}"
+            --max-turns 60
+            --allowedTools "${{ matrix.allowedTools }}"
+            --tools "${{ matrix.tools }}"
+      - name: Capture the agent's work
+        env:
+          GIT_DIR: ${{ runner.temp }}/pristine.git
+          GIT_WORK_TREE: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/agent-out"
+          git add -A
+          git diff --cached --binary > "$RUNNER_TEMP/agent-out/opensdlc.patch"
+          for file in escalate.md runbook.json; do
+            if [ -f ".opensdlc/out/$file" ] && [ ! -L ".opensdlc/out/$file" ]; then
+              cp ".opensdlc/out/$file" "$RUNNER_TEMP/agent-out/"
+            fi
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opensdlc-monitor-${{ matrix.monitor }}
+          path: ${{ runner.temp }}/agent-out/
+          retention-days: 7
+
+  propose:
+    needs: [detect, agent]
+    if: ${{ !cancelled() && needs.detect.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect.outputs.matrix) }}
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/opensdlc-apply
+        with:
+          name: opensdlc-monitor-${{ matrix.monitor }}
+          change: new
+          allow: ${{ matrix.action == 'diagnose' && 'changes/**' || '' }}
+      - id: runbook
+        if: matrix.action == 'propose'
+        run: python -P -m opensdlc runbook --monitor "$MONITOR" --tier "$TIER"
+        env:
+          PYTHONPATH: .opensdlc/cli
+          MONITOR: ${{ matrix.monitor }}
+          TIER: ${{ matrix.tier }}
+      - name: Run the pre-approved runbook
+        if: steps.runbook.outputs.runbook != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNBOOK: ${{ steps.runbook.outputs.runbook }}
+          INPUTS: ${{ steps.runbook.outputs.inputs }}
+          REASON: OpenSDLC ${{ matrix.monitor }} breached ${{ matrix.tier }}
+        run: |
+          args=(-f "reason=$REASON")
+          while IFS= read -r pair; do
+            args+=(-f "$pair")
+          done < <(jq -r 'to_entries[] | "\(.key)=\(.value)"' <<<"$INPUTS")
+          gh workflow run "$RUNBOOK.yml" --repo "$GITHUB_REPOSITORY" "${args[@]}"
+      - id: pin
+        name: Read the plugin version the agents ran
+        run: python -P -m opensdlc plugin
+        env:
+          PYTHONPATH: .opensdlc/cli
+      - name: Describe the pull request
+        env:
+          PIN: ${{ steps.pin.outputs.pin }}
+          MONITOR: ${{ matrix.monitor }}
+          TIER: ${{ matrix.tier }}
+          RULES: ${{ join(matrix.rules, ', ') }}
+          LATEST: ${{ matrix.latest }}
+          MEAN: ${{ matrix.mean }}
+          STDEV: ${{ matrix.stdev }}
+          DETECTED: ${{ matrix.detectedAt }}
+          RUNBOOK: ${{ steps.runbook.outputs.runbook }}
+        run: |
+          {
+            echo "\`$MONITOR\` breached its control band ($TIER; rules: $RULES)."
+            echo "Latest $LATEST against a baseline mean of $MEAN (σ $STDEV)."
+            echo
+            echo "Claude's diagnosis is in the draft \`intent.md\`. Fix now, schedule, or close to dismiss; dismissals are the signal to retune the band."
+            if [ -n "$RUNBOOK" ]; then
+              echo
+              echo "Claude also ran the pre-approved runbook \`$RUNBOOK\`."
+            fi
+            echo
+            echo "Written with OpenSDLC \`$PIN\`."
+            echo
+            printf '<!-- opensdlc:breach {"monitor": "%s", "tier": "%s", "detectedAt": "%s"} -->\n' "$MONITOR" "$TIER" "$DETECTED"
+          } > "$RUNNER_TEMP/body.md"
+      - uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        with:
+          token: ${{ secrets.OPENSDLC_PR_TOKEN }}
+          branch: opensdlc/monitor/${{ matrix.monitor }}
+          title: "Triage: ${{ matrix.monitor }} breached ${{ matrix.tier }}"
+          commit-message: |
+            Triage ${{ matrix.monitor }} (${{ matrix.tier }})
+
+            OpenSDLC-Plugin: ${{ steps.pin.outputs.pin }}
+          labels: opensdlc,incident
+          body-path: ${{ runner.temp }}/body.md

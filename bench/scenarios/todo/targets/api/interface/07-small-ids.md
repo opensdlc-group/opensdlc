@@ -1,0 +1,1 @@
+- Every todo in `GET /todos` carries `"position"`: 1 for the first in the list, 2 for the next, worked out each time. Ids don't change.

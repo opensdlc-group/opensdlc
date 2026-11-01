@@ -1,0 +1,2 @@
+- `./todo add <title> --due YYYY-MM-DD` gives the new todo a due date.
+- Every todo prints with `"due": "YYYY-MM-DD"`, or `"due": null` when it has none.

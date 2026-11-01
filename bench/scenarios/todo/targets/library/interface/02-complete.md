@@ -1,0 +1,1 @@
+- `TodoList.complete(id)` returns the todo after marking it done.

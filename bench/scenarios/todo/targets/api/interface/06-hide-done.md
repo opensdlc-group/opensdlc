@@ -1,0 +1,1 @@
+- `GET /todos?remaining=true` answers 200 with the same JSON as `GET /todos`, with only the todos that aren't done, in list order.

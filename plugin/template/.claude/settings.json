@@ -1,0 +1,35 @@
+{
+  "extraKnownMarketplaces": {
+    "opensdlc": {
+      "source": { "source": "github", "repo": "opensdlc-group/opensdlc" }
+    }
+  },
+  "enabledPlugins": {
+    "opensdlc@opensdlc": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(make build)",
+      "Bash(make test)",
+      "Bash(make lint)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(python3 -m opensdlc check)",
+      "Bash(python3 -m opensdlc skills)",
+      "Bash(python3 -m opensdlc pin *)",
+      "Bash(python3 -m opensdlc context *)",
+      "Bash(python3 -m opensdlc accept *)",
+      "Bash(python3 -m opensdlc plan-match *)",
+      "Bash(python3 -m opensdlc review-context *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)"
+    ]
+  },
+  "env": {
+    "PYTHONPATH": ".opensdlc/cli"
+  }
+}

@@ -1,0 +1,16 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC rollback drill
+on:
+  schedule:
+    - cron: "13 6 * * 3"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  drill:
+    uses: ./.github/workflows/rollback-deploy.yml
+    with:
+      environment: staging-rollback
+      reason: Weekly rollback drill

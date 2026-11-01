@@ -1,0 +1,13 @@
+{
+  "name": "web",
+  "description": "A web app",
+  "stack": "TypeScript, React and Vite",
+  "setup": ["npm ci --no-audit --no-fund"],
+  "buildTools": "Bash(npx vitest run *)",
+  "adapter": {
+    "type": "web",
+    "build": ["npm", "run", "build", "--silent"],
+    "serve": ["npx", "vite", "preview", "--host", "127.0.0.1", "--strictPort", "--port", "{port}"],
+    "driver": "driver.py"
+  }
+}

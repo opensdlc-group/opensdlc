@@ -1,0 +1,2 @@
+- `new-todo-due` is a date input next to the title. Leaving it empty means no due date.
+- A `todo-item` with a due date contains `todo-due` showing it as YYYY-MM-DD; one without has no `todo-due`.

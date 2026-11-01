@@ -1,0 +1,1 @@
+- `./todo list --remaining` prints the same JSON as `./todo list`, with only the todos that aren't done, in list order.

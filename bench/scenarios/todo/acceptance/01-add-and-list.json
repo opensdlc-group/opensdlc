@@ -1,0 +1,174 @@
+{
+  "checks": [
+    {
+      "name": "a new list is empty",
+      "steps": [
+        {
+          "op": "list",
+          "expect": []
+        }
+      ]
+    },
+    {
+      "name": "todos are listed in the order they were added",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Buy milk"
+          },
+          "expect": {
+            "title": "Buy milk",
+            "done": false
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Walk the dog"
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "Buy milk",
+              "done": false
+            },
+            {
+              "title": "Walk the dog",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "spaces at either end of a title are dropped",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "  Call mum  "
+          },
+          "expect": {
+            "title": "Call mum",
+            "done": false
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "Call mum",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "titles keep inner spaces, accents and emoji",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Café  ☕ run"
+          },
+          "expect": {
+            "title": "Café  ☕ run",
+            "done": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "an empty title is rejected and nothing is saved",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": ""
+          },
+          "expect": {
+            "error": "invalid"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "   "
+          },
+          "expect": {
+            "error": "invalid"
+          }
+        },
+        {
+          "op": "list",
+          "expect": []
+        }
+      ]
+    },
+    {
+      "name": "titles may be 200 characters but not 201",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "expect": {
+            "error": "invalid"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "expect": {
+            "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "done": false
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "every todo gets its own id",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "One"
+          },
+          "as": "one"
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Two"
+          },
+          "as": "two"
+        },
+        {
+          "op": "distinct",
+          "args": {
+            "values": [
+              "$one.id",
+              "$two.id"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

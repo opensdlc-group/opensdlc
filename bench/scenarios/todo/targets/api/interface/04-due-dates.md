@@ -1,0 +1,2 @@
+- `POST /todos` also takes `"due": "YYYY-MM-DD"`.
+- Every todo has `"due"`: the `"YYYY-MM-DD"` string, or `null` when it has none.

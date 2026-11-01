@@ -1,0 +1,38 @@
+schema_version: '1.1'
+name: plan-turns-an-accepted-spec-into-a-plan
+description: An accepted spec for clearing finished todos. The plan names the files that change and proves the work with the test command.
+tags:
+- plan
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 80
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: /opensdlc:plan changes/2026-10-clear-out-finished-todos (write, headless)
+graders:
+- name: wrote-the-plan
+  type: file_exists
+  path: changes/2026-10-clear-out-finished-todos/plan.md
+- name: did-not-escalate
+  type: file_exists
+  path: .opensdlc/out/escalate.md
+  exists: false
+- name: names-the-code-it-changes
+  type: regex
+  pattern: '## Files that change\n[\s\S]*?src/todo_cli/'
+  target:
+    source: file
+    path: changes/2026-10-clear-out-finished-todos/plan.md
+- name: proves-it-with-the-tests
+  type: regex
+  pattern: '## Proof\n[\s\S]*?make test'
+  target:
+    source: file
+    path: changes/2026-10-clear-out-finished-todos/plan.md

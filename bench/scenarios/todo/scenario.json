@@ -1,0 +1,17 @@
+{
+  "name": "todo",
+  "description": "A todo list built in seven tickets: capture, complete, delete, a change request for due dates, clearing done items, a request that contradicts itself, and a request that reverses a decision settled in the first ticket. Only the product owner can settle the last two.",
+  "tickets": [
+    "01-add-and-list",
+    "02-complete",
+    "03-delete",
+    "04-due-dates",
+    "05-clear-completed",
+    "06-hide-done",
+    "07-small-ids"
+  ],
+  "escalate": [
+    "06-hide-done",
+    "07-small-ids"
+  ]
+}

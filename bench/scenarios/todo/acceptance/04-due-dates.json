@@ -1,0 +1,183 @@
+{
+  "checks": [
+    {
+      "name": "dated todos come first, earliest first, ties in the order added",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "No date one"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "December",
+            "due": "2026-12-01"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "November first",
+            "due": "2026-11-15"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "No date two"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "November second",
+            "due": "2026-11-15"
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "November first",
+              "done": false,
+              "due": "2026-11-15"
+            },
+            {
+              "title": "November second",
+              "done": false,
+              "due": "2026-11-15"
+            },
+            {
+              "title": "December",
+              "done": false,
+              "due": "2026-12-01"
+            },
+            {
+              "title": "No date one",
+              "done": false,
+              "due": null
+            },
+            {
+              "title": "No date two",
+              "done": false,
+              "due": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a new todo shows its due date or none",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Dated",
+            "due": "2027-01-31"
+          },
+          "expect": {
+            "title": "Dated",
+            "done": false,
+            "due": "2027-01-31"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Undated"
+          },
+          "expect": {
+            "title": "Undated",
+            "done": false,
+            "due": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "dates in the past are fine",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Overdue",
+            "due": "2020-01-01"
+          },
+          "expect": {
+            "title": "Overdue",
+            "done": false,
+            "due": "2020-01-01"
+          }
+        }
+      ]
+    },
+    {
+      "name": "dates that don't exist are rejected and nothing is saved",
+      "except": [
+        "web"
+      ],
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Impossible",
+            "due": "2026-02-30"
+          },
+          "expect": {
+            "error": "invalid"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Vague",
+            "due": "tomorrow"
+          },
+          "expect": {
+            "error": "invalid"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Backwards",
+            "due": "31/12/2026"
+          },
+          "expect": {
+            "error": "invalid"
+          }
+        },
+        {
+          "op": "list",
+          "expect": []
+        }
+      ]
+    },
+    {
+      "name": "completing keeps the due date",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Pay rent",
+            "due": "2026-11-01"
+          },
+          "as": "rent"
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$rent.id"
+          },
+          "expect": {
+            "title": "Pay rent",
+            "done": true,
+            "due": "2026-11-01"
+          }
+        }
+      ]
+    }
+  ]
+}

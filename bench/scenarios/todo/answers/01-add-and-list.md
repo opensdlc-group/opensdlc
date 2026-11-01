@@ -1,0 +1,5 @@
+- Ids may be strings or integers; nobody types them by hand often, so short is nice but not required.
+- 200 characters means 200 characters as a person counts them, not bytes. Titles can contain any language and emoji.
+- Spaces inside a title are kept as typed.
+- There is no editing of titles, no priorities and no users or accounts.
+- Store todos the way the interface document says for this product; don't add a database.

@@ -1,0 +1,256 @@
+{
+  "plugin": {
+    "repository": "opensdlc-group/opensdlc",
+    "ref": "v0.6.0"
+  },
+  "protected": [
+    {
+      "paths": [
+        "src/gen/**",
+        "**/generated/**"
+      ],
+      "reason": "Generated code. Change the source schema and run the generator."
+    },
+    {
+      "paths": [
+        "**/migrations/**"
+      ],
+      "reason": "Migrations need a change ticket and a tech lead. Ask a human to add the migration."
+    }
+  ],
+  "tests": [
+    "tests/**",
+    "test/**",
+    "**/__tests__/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/test_*.py",
+    "**/*_test.py",
+    "**/*_test.go"
+  ],
+  "format": [],
+  "verify": {
+    "commands": [
+      "make test",
+      "make lint"
+    ],
+    "ignore": [
+      "changes/**",
+      "knowledge/**",
+      "docs/**",
+      "**/*.md",
+      ".opensdlc/**"
+    ],
+    "maxBlocks": 3
+  },
+  "environments": [
+    {
+      "name": "development",
+      "autonomy": "free",
+      "commands": [
+        "\\bdeploy\\b.*\\b(dev|development)\\b"
+      ],
+      "tools": [
+        "^mcp__.*__(deploy|rollback)_development$"
+      ]
+    },
+    {
+      "name": "staging",
+      "autonomy": "ask",
+      "commands": [
+        "\\bdeploy\\b.*\\bstaging\\b",
+        "\\bwrangler\\s+deploy\\b.*--env[= ]staging"
+      ],
+      "tools": [
+        "^mcp__.*__(deploy|rollback)_staging$"
+      ],
+      "route": "Confirm the staging deploy in the session."
+    },
+    {
+      "name": "production",
+      "autonomy": "approval",
+      "commands": [
+        "\\bdeploy\\b.*\\b(prod|production)\\b",
+        "\\b(kubectl|helm)\\b.*(--context[= ]\\S*prod|\\s-n[= ]?prod\\b|--namespace[= ]prod\\b)",
+        "\\bterraform\\s+apply\\b.*\\bprod",
+        "\\bwrangler\\s+deploy\\b.*--env[= ]production"
+      ],
+      "tools": [
+        "^mcp__.*__(deploy|release|rollback)_production$"
+      ],
+      "approvalEnv": "RELEASE_APPROVAL",
+      "route": "Ask the release manager to authorize the release; the deploy pipeline sets RELEASE_APPROVAL once they do."
+    }
+  ],
+  "approvals": {
+    "groups": {
+      "product-owners": [
+        "@YOUR-ORG/product-owners"
+      ],
+      "tech-leads": [
+        "@YOUR-ORG/tech-leads"
+      ],
+      "engineers": [
+        "@YOUR-ORG/engineers"
+      ]
+    },
+    "rules": {
+      "intent": {
+        "require": [
+          "product-owners"
+        ]
+      },
+      "spec": {
+        "require": [
+          "product-owners"
+        ],
+        "high": [
+          "tech-leads"
+        ]
+      },
+      "plan": {
+        "require": [
+          "engineers"
+        ],
+        "high": [
+          "tech-leads"
+        ]
+      }
+    }
+  },
+  "knowledge": {
+    "sources": [
+      "knowledge/",
+      "docs/adr/"
+    ],
+    "always": [
+      "GLOSSARY.md"
+    ],
+    "reviewWarnDays": 14,
+    "graceDays": 14,
+    "skillsDir": ".claude/skills"
+  },
+  "planMatch": {
+    "required": false
+  },
+  "pipeline": {
+    "forbiddenPaths": [
+      ".github/**",
+      ".opensdlc/**",
+      "**/.claude/**",
+      ".claude.json",
+      ".mcp.json",
+      "**/AGENTS.md",
+      "**/CLAUDE.md",
+      "**/CLAUDE.local.md",
+      "REVIEW.md",
+      "GLOSSARY.md",
+      "knowledge/**",
+      "docs/adr/**",
+      "evals/**",
+      "**/.gitattributes",
+      ".gitmodules"
+    ]
+  },
+  "intake": {
+    "label": "intent"
+  },
+  "stages": {
+    "spec": {
+      "allowedTools": "Read,Write,Edit,Glob,Grep,Skill,Agent"
+    },
+    "plan": {
+      "allowedTools": "Read,Write,Edit,Glob,Grep,Skill,Agent"
+    },
+    "build": {
+      "model": "haiku",
+      "autoRisk": [],
+      "allowedTools": "Read,Write,Edit,Glob,Grep,Agent,Skill,Bash(make build),Bash(make test),Bash(make lint),Bash(git diff *),Bash(git status *),Bash(git log *)"
+    },
+    "verify": {
+      "allowedTools": "Read,Glob,Grep,Skill,Edit(.opensdlc/out/verify.md),Bash(make build),Bash(make test),Bash(make lint)"
+    },
+    "gate": {
+      "allowedTools": "Read,Glob,Grep,Skill,Edit(.opensdlc/out/gate.json),Bash(git diff *),Bash(git status *),Bash(git log *)"
+    }
+  },
+  "monitors": [
+    {
+      "name": "ci-failure-rate",
+      "metric": "Daily CI failure rate on the default branch",
+      "source": {
+        "type": "github-ci-failure-rate",
+        "workflow": "CI",
+        "branch": "main",
+        "event": "push",
+        "limit": 1000
+      },
+      "direction": "up",
+      "window": 30,
+      "tiers": {
+        "1sigma": {
+          "action": "log"
+        },
+        "2sigma": {
+          "action": "diagnose",
+          "tools": "Read,Glob,Grep,Skill,Edit(changes/**),Bash(git log *),Bash(git show *)"
+        },
+        "3sigma": {
+          "action": "propose",
+          "tools": "Read,Write,Edit,Glob,Grep,Skill,Bash(git log *),Bash(git show *),Bash(git revert --no-commit *)",
+          "runbooks": [
+            {
+              "name": "rollback-deploy",
+              "inputs": {
+                "environment": "production-rollback"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "evals": {
+    "repeats": 3,
+    "maxDrop": 0.1,
+    "caseDrop": 0.34,
+    "floor": null,
+    "timeout": 900,
+    "settings": ".opensdlc/ci-settings.json"
+  },
+  "metrics": {
+    "windowDays": 30,
+    "ciWorkflow": "CI",
+    "agents": {
+      "logins": [
+        "claude[bot]",
+        "claude",
+        "github-actions[bot]"
+      ],
+      "branchPrefixes": [
+        "opensdlc/",
+        "claude/"
+      ],
+      "labels": [
+        "opensdlc"
+      ]
+    },
+    "gates": [],
+    "deployEnvironment": "production",
+    "incidents": {
+      "type": "github-issues",
+      "label": "incident"
+    },
+    "otel": {},
+    "security": {},
+    "team": {},
+    "adoptedAt": null,
+    "baseline": {
+      "issueLabel": "feature"
+    }
+  },
+  "review": {
+    "historyDays": 90,
+    "nitCap": 5
+  }
+}

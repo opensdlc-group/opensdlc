@@ -1,0 +1,208 @@
+diff --git a/src/todo_cli/__main__.py b/src/todo_cli/__main__.py
+index 1d8cf6c..207e15e 100644
+--- a/src/todo_cli/__main__.py
++++ b/src/todo_cli/__main__.py
+@@ -17,7 +17,7 @@ def main(argv: list[str]) -> int:
+     command, args = argv[0], argv[1:]
+     new_title = None
+     todo_id = None
+-    if command == "list" and not args:
++    if command in ("list", "clear") and not args:
+         pass
+     elif command == "add":
+         try:
+@@ -41,6 +41,8 @@ def main(argv: list[str]) -> int:
+         changed = True
+         if new_title is not None:
+             output = store.add(data, new_title)
++        elif command == "clear":
++            output = {"removed": store.clear_done(data)}
+         elif command == "delete":
+             output = {"deleted": store.delete(data, todo_id)}
+         elif todo_id is not None:
+diff --git a/src/todo_cli/store.py b/src/todo_cli/store.py
+index 7adcd8f..d779f96 100644
+--- a/src/todo_cli/store.py
++++ b/src/todo_cli/store.py
+@@ -63,6 +63,13 @@ def delete(store: dict, todo_id: int) -> int:
+     raise UnknownId(f"no todo with id {todo_id}")
+ 
+ 
++def clear_done(store: dict) -> int:
++    """Remove every done todo and return how many went. `next_id` stays."""
++    before = len(store["todos"])
++    store["todos"] = [t for t in store["todos"] if t.get("done") is True]
++    return before - len(store["todos"])
++
++
+ def add(store: dict, title: str) -> dict:
+     todo = {"id": store["next_id"], "title": title, "done": False}
+     store["todos"].append(todo)
+diff --git a/tests/test_clear.py b/tests/test_clear.py
+new file mode 100644
+index 0000000..c9fc0f3
+--- /dev/null
++++ b/tests/test_clear.py
+@@ -0,0 +1,162 @@
++import json
++import os
++import subprocess
++import tempfile
++import unittest
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parent.parent
++
++
++class Clear(unittest.TestCase):
++    def setUp(self):
++        tmp = tempfile.TemporaryDirectory()
++        self.addCleanup(tmp.cleanup)
++        self.store = Path(tmp.name) / "todo.json"
++
++    def run_todo(self, *args, store="default"):
++        env = {k: v for k, v in os.environ.items() if k != "TODO_FILE"}
++        if store == "default":
++            env["TODO_FILE"] = str(self.store)
++        return subprocess.run(
++            [str(ROOT / "todo"), *args], capture_output=True, text=True, env=env
++        )
++
++    def assert_refused(self, result, code=2):
++        self.assertEqual(result.returncode, code)
++        self.assertEqual(result.stdout, "")
++        self.assertEqual(len(result.stderr.strip().splitlines()), 1)
++
++    def assert_refused_unchanged(self, *args, code=2):
++        before = self.store.read_bytes() if self.store.exists() else None
++        self.assert_refused(self.run_todo(*args), code)
++        after = self.store.read_bytes() if self.store.exists() else None
++        self.assertEqual(before, after)
++
++    def add_four(self):
++        for title in ("Buy milk", "Walk dog", "Call mum", "Feed cat"):
++            self.run_todo("add", title)
++
++    def listed(self):
++        result = self.run_todo("list")
++        self.assertEqual(result.returncode, 0)
++        return json.loads(result.stdout)
++
++    def added_id(self, title="Water plants"):
++        result = self.run_todo("add", title)
++        self.assertEqual(result.returncode, 0)
++        return json.loads(result.stdout)["id"]
++
++    def cleared_one_and_three(self):
++        self.add_four()
++        self.run_todo("done", "1")
++        self.run_todo("done", "3")
++        return self.run_todo("clear")
++
++    def test_1_clear_prints_how_many_went(self):
++        result = self.cleared_one_and_three()
++        self.assertEqual(result.returncode, 0)
++        self.assertEqual(result.stderr, "")
++        out = json.loads(result.stdout)
++        self.assertEqual(out, {"removed": 2})
++        self.assertIs(type(out["removed"]), int)
++        self.assertEqual(len(result.stdout.strip().splitlines()), 1)
++
++    def test_2_not_done_todos_stay_in_order(self):
++        self.cleared_one_and_three()
++        self.assertEqual(
++            self.listed(),
++            [
++                {"id": 2, "title": "Walk dog", "done": False},
++                {"id": 4, "title": "Feed cat", "done": False},
++            ],
++        )
++
++    def test_3_second_clear_removes_nothing(self):
++        self.cleared_one_and_three()
++        before = self.listed()
++        result = self.run_todo("clear")
++        self.assertEqual(result.returncode, 0)
++        self.assertEqual(json.loads(result.stdout), {"removed": 0})
++        self.assertEqual(self.listed(), before)
++
++    def test_4_cleared_ids_are_not_reissued(self):
++        self.cleared_one_and_three()
++        self.assertEqual(self.added_id(), 5)
++
++    def test_5_clearing_the_highest_id_does_not_reissue_it(self):
++        for title in ("Buy milk", "Walk dog", "Call mum"):
++            self.run_todo("add", title)
++        self.run_todo("done", "3")
++        result = self.run_todo("clear")
++        self.assertEqual(json.loads(result.stdout), {"removed": 1})
++        self.assertEqual(self.added_id(), 4)
++        self.assertEqual(
++            [(t["id"], t["title"]) for t in self.listed()[:2]],
++            [(1, "Buy milk"), (2, "Walk dog")],
++        )
++
++    def test_6_clearing_everything_still_does_not_reissue_ids(self):
++        self.add_four()
++        for todo_id in ("1", "2", "3", "4"):
++            self.run_todo("done", todo_id)
++        result = self.run_todo("clear")
++        self.assertEqual(json.loads(result.stdout), {"removed": 4})
++        self.assertEqual(self.run_todo("list").stdout.strip(), "[]")
++        self.assertEqual(self.added_id(), 5)
++
++    def test_7_nothing_done_removes_nothing(self):
++        self.add_four()
++        before = self.listed()
++        result = self.run_todo("clear")
++        self.assertEqual(result.returncode, 0)
++        self.assertEqual(json.loads(result.stdout), {"removed": 0})
++        self.assertEqual(self.listed(), before)
++
++    def test_8_empty_list_and_missing_store(self):
++        self.run_todo("add", "Buy milk")
++        self.run_todo("delete", "1")
++        result = self.run_todo("clear")
++        self.assertEqual(result.returncode, 0)
++        self.assertEqual(json.loads(result.stdout), {"removed": 0})
++        self.store.unlink()
++        result = self.run_todo("clear")
++        self.assertEqual(result.returncode, 0)
++        self.assertEqual(json.loads(result.stdout), {"removed": 0})
++        self.assertEqual(self.run_todo("list").stdout.strip(), "[]")
++
++    def test_9_remaining_todos_keep_their_ids(self):
++        self.cleared_one_and_three()
++        self.assertEqual(
++            json.loads(self.run_todo("done", "2").stdout),
++            {"id": 2, "title": "Walk dog", "done": True},
++        )
++        self.assertEqual(
++            json.loads(self.run_todo("done", "4").stdout),
++            {"id": 4, "title": "Feed cat", "done": True},
++        )
++        self.assert_refused_unchanged("done", "1", code=3)
++
++    def test_10_cleared_todo_cannot_be_deleted_or_ticked_again(self):
++        self.cleared_one_and_three()
++        self.assert_refused_unchanged("delete", "1", code=3)
++        self.assert_refused_unchanged("done", "1", code=3)
++
++    def test_11_arguments_are_refused_and_change_nothing(self):
++        self.add_four()
++        self.run_todo("done", "2")
++        for args in (("1",), ("all",), ("",)):
++            with self.subTest(args=args):
++                self.assert_refused_unchanged("clear", *args)
++        self.assertEqual(self.listed()[1], {"id": 2, "title": "Walk dog", "done": True})
++
++    def test_12_unset_todo_file_is_refused(self):
++        self.assert_refused(self.run_todo("clear", store=None))
++
++    def test_13_unreadable_store_is_refused_and_untouched(self):
++        self.store.write_text("not json")
++        self.assert_refused_unchanged("clear", code=1)
++
++
++if __name__ == "__main__":
++    unittest.main()

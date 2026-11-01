@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/opensdlc-apply
+      - /.github/actions/opensdlc-plugin
+      - /.github/actions/opensdlc-sandbox
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

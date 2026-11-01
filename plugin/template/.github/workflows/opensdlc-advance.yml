@@ -1,0 +1,272 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC advance
+on:
+  push:
+    branches: [main]
+    paths: ["changes/**"]
+concurrency:
+  group: opensdlc-advance-${{ github.sha }}
+permissions:
+  contents: read
+jobs:
+  due:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.advance.outputs.matrix }}
+      count: ${{ steps.advance.outputs.count }}
+      links: ${{ steps.advance.outputs.links }}
+      linkCount: ${{ steps.advance.outputs.linkCount }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - id: advance
+        run: python -P -m opensdlc advance --base "$BEFORE" --head "$GITHUB_SHA"
+        env:
+          PYTHONPATH: .opensdlc/cli
+          BEFORE: ${{ github.event.before }}
+
+  link:
+    needs: due
+    if: needs.due.outputs.linkCount != '0'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Tell each ticket its intent was accepted
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LINKS: ${{ needs.due.outputs.links }}
+        run: |
+          jq -c '.[]' <<<"$LINKS" | while read -r link; do
+            issue=$(jq -r .issue <<<"$link")
+            change=$(jq -r .change <<<"$link")
+            url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/changes/$change/intent.md"
+            gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body "Accepted as intent [\`changes/$change\`]($url). OpenSDLC drafts the spec next."
+          done
+
+  agent:
+    needs: due
+    if: needs.due.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.due.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/opensdlc-sandbox
+      - name: Scope the context
+        run: python -P -m opensdlc context "$CHANGE" --stage "$STAGE"
+        env:
+          PYTHONPATH: .opensdlc/cli
+          CHANGE: ${{ matrix.change }}
+          STAGE: ${{ matrix.stage }}
+      - name: Keep a pristine git directory
+        run: cp -a .git "$RUNNER_TEMP/pristine.git"
+      - id: plugin
+        uses: ./.github/actions/opensdlc-plugin
+        with:
+          token: ${{ secrets.OPENSDLC_PLUGIN_TOKEN }}
+      - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          settings: .opensdlc/ci-settings.json
+          prompt: /${{ matrix.skill }} ${{ matrix.change }} (${{ matrix.mode }}, headless)
+          claude_args: >-
+            --plugin-dir "${{ steps.plugin.outputs.dir }}"
+            --max-turns 80
+            ${{ matrix.model && format('--model {0}', matrix.model) || '' }}
+            --allowedTools "${{ matrix.allowedTools }}"
+            --tools "${{ matrix.tools }}"
+      - name: Capture the agent's work
+        env:
+          GIT_DIR: ${{ runner.temp }}/pristine.git
+          GIT_WORK_TREE: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/agent-out"
+          git add -A
+          git diff --cached --binary > "$RUNNER_TEMP/agent-out/opensdlc.patch"
+          if [ -f .opensdlc/out/escalate.md ] && [ ! -L .opensdlc/out/escalate.md ]; then
+            cp .opensdlc/out/escalate.md "$RUNNER_TEMP/agent-out/"
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opensdlc-${{ matrix.id }}-${{ matrix.stage }}
+          path: ${{ runner.temp }}/agent-out/
+          retention-days: 7
+
+  gate:
+    needs: [due, agent]
+    if: needs.due.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.due.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/opensdlc-sandbox
+      - uses: ./.github/actions/opensdlc-apply
+        with:
+          name: opensdlc-${{ matrix.id }}-${{ matrix.stage }}
+          change: ${{ matrix.id }}
+          allow: ${{ matrix.scope }}
+      - id: plugin
+        uses: ./.github/actions/opensdlc-plugin
+        with:
+          token: ${{ secrets.OPENSDLC_PLUGIN_TOKEN }}
+      - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          settings: .opensdlc/ci-settings.json
+          prompt: /opensdlc:gate ${{ matrix.change }} ${{ matrix.stage }} (headless)
+          claude_args: >-
+            --plugin-dir "${{ steps.plugin.outputs.dir }}"
+            --max-turns ${{ matrix.stage == 'build' && 60 || 40 }}
+            ${{ matrix.gateModel && format('--model {0}', matrix.gateModel) || '' }}
+            --allowedTools "${{ matrix.gateAllowedTools }}"
+            --tools "${{ matrix.gateTools }}"
+      - name: Collect the verdict
+        run: |
+          mkdir -p "$RUNNER_TEMP/gate-out"
+          for name in gate.json verify.md; do
+            if [ -f ".opensdlc/out/$name" ] && [ ! -L ".opensdlc/out/$name" ]; then
+              cp ".opensdlc/out/$name" "$RUNNER_TEMP/gate-out/"
+            fi
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opensdlc-${{ matrix.id }}-${{ matrix.stage }}-gate
+          path: ${{ runner.temp }}/gate-out/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  propose:
+    needs: [due, agent, gate]
+    if: ${{ !cancelled() && needs.due.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: opensdlc-propose-${{ matrix.id }}-${{ matrix.stage }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.due.outputs.matrix) }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - id: apply
+        uses: ./.github/actions/opensdlc-apply
+        with:
+          name: opensdlc-${{ matrix.id }}-${{ matrix.stage }}
+          change: ${{ matrix.id }}
+          allow: ${{ matrix.scope }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        continue-on-error: true
+        with:
+          name: opensdlc-${{ matrix.id }}-${{ matrix.stage }}-gate
+          path: ${{ runner.temp }}/gate-out
+      - id: gate
+        name: Read the confidence gate's verdict
+        run: |
+          mkdir -p "$RUNNER_TEMP/gate-out"
+          python -P -m opensdlc gate-check --stage "$STAGE" --change "$CHANGE" --out "$RUNNER_TEMP/gate-out"
+        env:
+          PYTHONPATH: .opensdlc/cli
+          STAGE: ${{ matrix.stage }}
+          CHANGE: ${{ matrix.change }}
+      - name: Pin, then propose acceptance or mark the plan implemented, unless the agent or the gate escalated
+        env:
+          PYTHONPATH: .opensdlc/cli
+          CHANGE: ${{ matrix.change }}
+          STAGE: ${{ matrix.stage }}
+          ESCALATED: ${{ steps.apply.outputs.escalated == 'true' || steps.gate.outputs.escalate == 'true' }}
+        run: |
+          python -P -m opensdlc pin "$CHANGE"
+          if [ "$ESCALATED" = true ]; then
+            exit 0
+          elif [ "$STAGE" = build ]; then
+            python -P -m opensdlc implement "$CHANGE"
+          else
+            python -P -m opensdlc accept "$CHANGE" --kind "$STAGE"
+          fi
+      - id: reviewers
+        if: matrix.stage != 'build'
+        run: python -P -m opensdlc reviewers "$CHANGE" --kind "$STAGE"
+        env:
+          PYTHONPATH: .opensdlc/cli
+          CHANGE: ${{ matrix.change }}
+          STAGE: ${{ matrix.stage }}
+      - id: pin
+        name: Read the plugin version the agents ran
+        run: python -P -m opensdlc plugin
+        env:
+          PYTHONPATH: .opensdlc/cli
+      - name: Describe the pull request
+        env:
+          PIN: ${{ steps.pin.outputs.pin }}
+          CHANGE: ${{ matrix.change }}
+          STAGE: ${{ matrix.stage }}
+          ID: ${{ matrix.id }}
+          ISSUE: ${{ matrix.issue }}
+          AGENT_ESCALATED: ${{ steps.apply.outputs.escalated }}
+          GATE_ESCALATED: ${{ steps.gate.outputs.escalate }}
+        run: |
+          {
+            echo "Automated **$STAGE** for \`$CHANGE\`."
+            echo
+            if [ "$AGENT_ESCALATED" = true ] || [ "$GATE_ESCALATED" = true ]; then
+              if [ "$STAGE" = build ]; then
+                echo "This needs a person, so the plan stays accepted. Finish the build on this branch, then run \`python3 -m opensdlc implement $ID\`."
+              else
+                echo "This needs a person, so it stays a draft. Revise it on this branch, then run \`python3 -m opensdlc accept $ID --kind $STAGE\` to propose acceptance."
+              fi
+              if [ "$AGENT_ESCALATED" = true ]; then
+                echo
+                cat .opensdlc/out/escalate.md
+              fi
+              if [ "$GATE_ESCALATED" = true ]; then
+                echo
+                cat "$RUNNER_TEMP/gate-out/gate-report.md"
+              fi
+            elif [ "$STAGE" = build ]; then
+              echo "Implements the accepted plan and marks it implemented. The review stage, the plan-match check and code owners decide."
+            else
+              echo "This PR proposes \`status: accepted\`. Merging it with the approvals the **OpenSDLC approvals** check lists accepts the $STAGE. Edit the artifact on this branch first if it needs changes."
+            fi
+            echo
+            echo "Written with OpenSDLC \`$PIN\`."
+            echo
+            echo "Change: $ID"
+            if [ -n "$ISSUE" ]; then
+              if [ "$STAGE" = build ]; then echo "Closes #$ISSUE"; else echo "Refs #$ISSUE"; fi
+            fi
+          } > "$RUNNER_TEMP/body.md"
+      - uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        with:
+          token: ${{ secrets.OPENSDLC_PR_TOKEN }}
+          branch: ${{ matrix.branch }}
+          title: ${{ matrix.title }}
+          commit-message: |
+            ${{ matrix.title }}
+
+            OpenSDLC-Plugin: ${{ steps.pin.outputs.pin }}
+          body-path: ${{ runner.temp }}/body.md
+          labels: ${{ (steps.apply.outputs.escalated == 'true' || steps.gate.outputs.escalate == 'true') && 'opensdlc,needs-human' || 'opensdlc' }}
+          reviewers: ${{ steps.reviewers.outputs.users }}
+          team-reviewers: ${{ steps.reviewers.outputs.teams }}

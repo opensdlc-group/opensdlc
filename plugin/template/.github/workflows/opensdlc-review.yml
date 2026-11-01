@@ -1,0 +1,104 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC review
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+concurrency:
+  group: opensdlc-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  reviewer:
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/opensdlc-sandbox
+      - name: Hand the reviewer its sources
+        env:
+          PYTHONPATH: .opensdlc/cli
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          mkdir -p .opensdlc/out
+          gh pr diff "$PR" --repo "$GITHUB_REPOSITORY" > .opensdlc/out/pr.diff
+          gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json number,title,body,author,baseRefName,headRefName,files > .opensdlc/out/pr.json
+          jq -r '.body // ""' .opensdlc/out/pr.json > "$RUNNER_TEMP/body.md"
+          python -P -m opensdlc review-context --base "origin/$BASE_REF" --head HEAD --body-file "$RUNNER_TEMP/body.md"
+          python -P -m opensdlc review-history --pr "$PR"
+      - id: plugin
+        uses: ./.github/actions/opensdlc-plugin
+        with:
+          token: ${{ secrets.OPENSDLC_PLUGIN_TOKEN }}
+      - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          settings: .opensdlc/ci-settings.json
+          prompt: /opensdlc:review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} (headless)
+          claude_args: >-
+            --plugin-dir "${{ steps.plugin.outputs.dir }}"
+            --max-turns 60
+            --allowedTools "Read,Edit(.opensdlc/out/**),Glob,Grep,Agent,Skill,Bash(git diff *),Bash(git log *),Bash(git show *),Bash(git merge-base *),Bash(git rev-parse *)"
+            --tools "Read,Edit,Write,Glob,Grep,Agent,Skill,Bash"
+      - name: Keep the tally
+        run: |
+          mkdir -p "$RUNNER_TEMP/agent-out"
+          if [ -f .opensdlc/out/review.json ] && [ ! -L .opensdlc/out/review.json ]; then
+            cp .opensdlc/out/review.json "$RUNNER_TEMP/agent-out/"
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opensdlc-review-${{ github.event.pull_request.number }}
+          path: ${{ runner.temp }}/agent-out/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  review:
+    needs: reviewer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: opensdlc-review-${{ github.event.pull_request.number }}
+          path: ${{ runner.temp }}/agent-out
+      - id: publish
+        name: Post findings inline and the tally
+        run: python -P -m opensdlc review-publish --pr "$PR" --head "$HEAD" --tally "$RUNNER_TEMP/agent-out/review.json"
+        env:
+          PYTHONPATH: .opensdlc/cli
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+      - name: Gate on important findings
+        if: vars.OPENSDLC_BLOCK_ON_IMPORTANT == 'true' && steps.publish.outputs.important != '0'
+        run: |
+          echo "::error::The review reported $IMPORTANT important findings."
+          exit 1
+        env:
+          IMPORTANT: ${{ steps.publish.outputs.important }}

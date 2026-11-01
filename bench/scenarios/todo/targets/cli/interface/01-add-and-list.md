@@ -1,0 +1,2 @@
+- `./todo add <title>` prints the new todo.
+- `./todo list` prints a JSON array of every todo.

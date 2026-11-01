@@ -1,0 +1,2 @@
+- Removing is permanent. No undo, no bin.
+- Removing a done todo works the same as removing an open one.

@@ -1,0 +1,26 @@
+schema_version: '1.1'
+name: review-triggers-on-a-plain-request
+description: Someone asks, in plain words, for a pull request to be reviewed. The review skill is the one chosen.
+tags:
+- review
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 60
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: Review the pull request whose diff is in .opensdlc/out/pr.diff against this repository's review standards, and leave the tally where the pipeline reads it. Don't ask me anything.
+graders:
+- name: chose-the-review-skill
+  type: tool_used
+  tool: Skill
+  input_match: '"skill"\s*:\s*"(?:opensdlc:)?review"'
+- name: wrote-the-tally
+  type: file_exists
+  path: .opensdlc/out/review.json

@@ -1,0 +1,117 @@
+{
+  "checks": [
+    {
+      "name": "a completed todo stays listed, shown as done",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Buy milk"
+          },
+          "as": "milk"
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Walk the dog"
+          }
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$milk.id"
+          },
+          "expect": {
+            "title": "Buy milk",
+            "done": true
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "Buy milk",
+              "done": true
+            },
+            {
+              "title": "Walk the dog",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "completing a done todo again changes nothing",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Buy milk"
+          },
+          "as": "milk"
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$milk.id"
+          }
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$milk.id"
+          },
+          "expect": {
+            "title": "Buy milk",
+            "done": true
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "Buy milk",
+              "done": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "completing an unknown id is an error",
+      "except": [
+        "web"
+      ],
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Buy milk"
+          },
+          "as": "known"
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": {
+              "unknown": "$known.id"
+            }
+          },
+          "expect": {
+            "error": "not_found"
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "Buy milk",
+              "done": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "opensdlc",
+  "owner": {
+    "name": "The OpenSDLC Authors"
+  },
+  "description": "An open-source AI-native SDLC: intent, spec, plan, build, test, deploy and maintain as a loop of committed artifacts, deterministic gates and measured indicators.",
+  "plugins": [
+    {
+      "name": "opensdlc",
+      "source": "./plugin",
+      "description": "Stage skills, review and verification agents, guardrail and approval-gate hooks, indicator collection, and a repo template for an AI-native SDLC."
+    }
+  ]
+}

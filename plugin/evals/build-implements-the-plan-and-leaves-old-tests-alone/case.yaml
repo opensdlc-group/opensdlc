@@ -1,0 +1,48 @@
+schema_version: '1.1'
+name: build-implements-the-plan-and-leaves-old-tests-alone
+description: An accepted plan for clearing finished todos. The build adds the command, runs the tests, edits no test that already existed, and leaves marking the plan implemented to the pipeline.
+tags:
+- build
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 80
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: /opensdlc:build changes/2026-10-clear-out-finished-todos (write, headless)
+graders:
+- name: ran-the-tests
+  type: tool_used
+  tool: Bash
+  input_match: make test
+- name: edited-no-old-test
+  type: tool_used
+  tool: Edit
+  input_match: '"file_path"\s*:\s*"[^"]*tests/test_(add_list|done|delete|smoke)\.py"'
+  min: 0
+  max: 0
+- name: rewrote-no-old-test
+  type: tool_used
+  tool: Write
+  input_match: '"file_path"\s*:\s*"[^"]*tests/test_(add_list|done|delete|smoke)\.py"'
+  min: 0
+  max: 0
+- name: added-the-command
+  type: regex
+  pattern: \bclear\b
+  target:
+    source: file
+    path: src/todo_cli/__main__.py
+- name: left-the-plan-accepted
+  type: regex
+  pattern: '^status: accepted$'
+  flags: m
+  target:
+    source: file
+    path: changes/2026-10-clear-out-finished-todos/plan.md

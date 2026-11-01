@@ -1,0 +1,35 @@
+schema_version: '1.1'
+name: review-flags-a-change-that-breaks-an-adr
+description: A green pull request that reuses deleted ids and rewrites the tests that guarded ADR 0001. The review must raise it as Important.
+tags:
+- review
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 60
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: /opensdlc:review .opensdlc/out/pr.diff (headless)
+graders:
+- name: wrote-the-tally
+  type: file_exists
+  path: .opensdlc/out/review.json
+- name: raises-an-important-finding
+  type: regex
+  pattern: '"severity"\s*:\s*"important"'
+  target:
+    source: file
+    path: .opensdlc/out/review.json
+- name: names-the-broken-promise
+  type: regex
+  pattern: 0001|public-contract|permanent|reuse|reissu
+  flags: i
+  target:
+    source: file
+    path: .opensdlc/out/review.json

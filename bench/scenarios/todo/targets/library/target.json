@@ -1,0 +1,22 @@
+{
+  "name": "library",
+  "description": "A library other code imports",
+  "stack": "Python 3.12, standard library only",
+  "setup": [],
+  "buildTools": "Bash(python3 -c *),Bash(PYTHONPATH=src python3 -c *),Bash(python3 -m unittest *)",
+  "adapter": {
+    "type": "library",
+    "path": "src",
+    "module": "todo",
+    "factory": "TodoList",
+    "exceptions": {"ValueError": "invalid", "KeyError": "not_found"},
+    "ops": {
+      "add": {"call": "add", "args": ["title", "due?"]},
+      "list": {"call": "list"},
+      "complete": {"call": "complete", "args": ["id"]},
+      "delete": {"call": "delete", "args": ["id"]},
+      "clear": {"call": "clear_completed", "as": "removed"},
+      "list_remaining": {"call": "remaining"}
+    }
+  }
+}

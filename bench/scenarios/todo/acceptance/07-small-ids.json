@@ -1,0 +1,131 @@
+{
+  "checks": [
+    {
+      "name": "deleted ids are still never reused",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "First"
+          },
+          "as": "first"
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Second"
+          }
+        },
+        {
+          "op": "delete",
+          "args": {
+            "id": "$first.id"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Third"
+          },
+          "as": "third"
+        },
+        {
+          "op": "distinct",
+          "args": {
+            "values": [
+              "$first.id",
+              "$third.id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "the list numbers todos by their place in it",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "A"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "B"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "C"
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "A",
+              "position": 1
+            },
+            {
+              "title": "B",
+              "position": 2
+            },
+            {
+              "title": "C",
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "positions close up after a delete, ids do not",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "A"
+          },
+          "as": "a"
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "B"
+          },
+          "as": "b"
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "C"
+          },
+          "as": "c"
+        },
+        {
+          "op": "delete",
+          "args": {
+            "id": "$b.id"
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "A",
+              "position": 1,
+              "id": "$a.id"
+            },
+            {
+              "title": "C",
+              "position": 2,
+              "id": "$c.id"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

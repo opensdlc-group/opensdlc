@@ -1,0 +1,2 @@
+- `POST /todos` with `{"title": "..."}` answers 201 with the new todo.
+- `GET /todos` answers 200 with an array of every todo.

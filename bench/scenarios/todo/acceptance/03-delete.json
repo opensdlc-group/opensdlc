@@ -1,0 +1,183 @@
+{
+  "checks": [
+    {
+      "name": "deleting removes only that todo and keeps the order",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "First"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Second"
+          },
+          "as": "second"
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "Third"
+          }
+        },
+        {
+          "op": "delete",
+          "args": {
+            "id": "$second.id"
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "First",
+              "done": false
+            },
+            {
+              "title": "Third",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a done todo can be deleted",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Done already"
+          },
+          "as": "done"
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$done.id"
+          }
+        },
+        {
+          "op": "delete",
+          "args": {
+            "id": "$done.id"
+          }
+        },
+        {
+          "op": "list",
+          "expect": []
+        }
+      ]
+    },
+    {
+      "name": "deleting an unknown id is an error",
+      "except": [
+        "web"
+      ],
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Keep me"
+          },
+          "as": "known"
+        },
+        {
+          "op": "delete",
+          "args": {
+            "id": {
+              "unknown": "$known.id"
+            }
+          },
+          "expect": {
+            "error": "not_found"
+          }
+        },
+        {
+          "op": "list",
+          "expect": [
+            {
+              "title": "Keep me",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a deleted todo is gone for good",
+      "except": [
+        "web"
+      ],
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Gone"
+          },
+          "as": "gone"
+        },
+        {
+          "op": "delete",
+          "args": {
+            "id": "$gone.id"
+          }
+        },
+        {
+          "op": "complete",
+          "args": {
+            "id": "$gone.id"
+          },
+          "expect": {
+            "error": "not_found"
+          }
+        },
+        {
+          "op": "delete",
+          "args": {
+            "id": "$gone.id"
+          },
+          "expect": {
+            "error": "not_found"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ids are not reused after a delete",
+      "steps": [
+        {
+          "op": "add",
+          "args": {
+            "title": "Old"
+          },
+          "as": "old"
+        },
+        {
+          "op": "delete",
+          "args": {
+            "id": "$old.id"
+          }
+        },
+        {
+          "op": "add",
+          "args": {
+            "title": "New"
+          },
+          "as": "new"
+        },
+        {
+          "op": "distinct",
+          "args": {
+            "values": [
+              "$old.id",
+              "$new.id"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

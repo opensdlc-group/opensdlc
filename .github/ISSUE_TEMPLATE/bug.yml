@@ -1,0 +1,42 @@
+name: Bug report
+description: Something in the plugin, CLI, template or bench does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Commands, ticket text, artifact or workflow run that shows it. Remove anything private.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: OpenSDLC version
+      description: The `plugin.ref` in your `.opensdlc/config.json`, or the commit you run.
+    validations:
+      required: true
+  - type: input
+    id: claude-code
+    attributes:
+      label: Claude Code version
+      description: Output of `claude --version`, if a session or workflow is involved.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - Interactive Claude Code session
+        - GitHub workflow
+        - opensdlc CLI
+        - Bench or evals
+        - Docs
+    validations:
+      required: true

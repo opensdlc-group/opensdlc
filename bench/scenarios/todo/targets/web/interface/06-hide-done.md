@@ -1,0 +1,1 @@
+- A `remaining-only` checkbox: while it is ticked the list shows only todos that aren't done, in list order; unticking it shows every todo again.

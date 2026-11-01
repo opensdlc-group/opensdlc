@@ -1,0 +1,55 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC indicators
+on:
+  schedule:
+    - cron: "23 0 * * 1"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Window in days
+        default: "30"
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: write
+      deployments: read
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - name: Collect indicators
+        run: python -P -m opensdlc metrics --days "$DAYS"
+        env:
+          PYTHONPATH: .opensdlc/cli
+          DAYS: ${{ inputs.days || '30' }}
+          GH_TOKEN: ${{ github.token }}
+      - name: Update the indicators issue
+        run: |
+          number=$(gh issue list --label opensdlc-indicators --state open --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            gh label create opensdlc-indicators --color 0E8A16 --description "OpenSDLC leading and lagging indicators" --force
+            gh issue create --title "OpenSDLC indicators" --label opensdlc-indicators --body-file .opensdlc/out/metrics.md
+          else
+            gh issue edit "$number" --body-file .opensdlc/out/metrics.md
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opensdlc-indicators-${{ github.run_id }}
+          path: .opensdlc/out/metrics.json
+          include-hidden-files: true
+          retention-days: 400

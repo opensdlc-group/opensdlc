@@ -1,0 +1,25 @@
+schema_version: '1.1'
+name: verify-passes-a-working-build
+description: The build for clearing finished todos, applied and working. Verification reports PASS.
+tags:
+- verify
+context:
+  scaffold_script: fixture.sh
+execution:
+  model: sonnet
+  max_turns: 40
+  timeout_seconds: 1200
+  allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  prompt: /opensdlc:verify changes/2026-10-clear-out-finished-todos (headless)
+graders:
+- name: passes
+  type: regex
+  pattern: ^PASS
+  target:
+    source: file
+    path: .opensdlc/out/verify.md

@@ -1,0 +1,1 @@
+- `./todo done <id>` prints the todo after marking it done.

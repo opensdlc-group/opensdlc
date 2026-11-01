@@ -1,0 +1,22 @@
+{
+  "name": "api",
+  "description": "An HTTP API",
+  "stack": "TypeScript on Node 22 with Hono",
+  "setup": ["npm ci --no-audit --no-fund"],
+  "buildTools": "Bash(npx vitest run *),Bash(./try *)",
+  "adapter": {
+    "type": "http",
+    "start": ["npm", "start", "--silent"],
+    "portEnv": "PORT",
+    "health": "/health",
+    "statuses": {"400": "invalid", "404": "not_found"},
+    "ops": {
+      "add": {"method": "POST", "path": "/todos", "body": ["title", "due"]},
+      "list": {"method": "GET", "path": "/todos"},
+      "complete": {"method": "POST", "path": "/todos/{id}/complete"},
+      "delete": {"method": "DELETE", "path": "/todos/{id}"},
+      "clear": {"method": "POST", "path": "/todos/clear-completed"},
+      "list_remaining": {"method": "GET", "path": "/todos?remaining=true"}
+    }
+  }
+}

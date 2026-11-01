@@ -1,0 +1,81 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC evals
+on:
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - "**/AGENTS.md"
+      - "CLAUDE.md"
+      - "**/CLAUDE.md"
+      - "REVIEW.md"
+      - ".claude/**"
+      - ".opensdlc/config.json"
+      - ".opensdlc/ci-settings.json"
+      - "knowledge/**"
+      - "evals/**"
+  push:
+    branches: [main]
+    paths:
+      - "AGENTS.md"
+      - "**/AGENTS.md"
+      - "CLAUDE.md"
+      - "**/CLAUDE.md"
+      - "REVIEW.md"
+      - ".claude/**"
+      - ".opensdlc/config.json"
+      - ".opensdlc/ci-settings.json"
+      - "knowledge/**"
+      - "evals/**"
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: opensdlc-evals-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  evals:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/opensdlc-sandbox
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "22"
+      - run: npm install -g @anthropic-ai/claude-code@2.1.316
+      - id: plugin
+        uses: ./.github/actions/opensdlc-plugin
+        with:
+          token: ${{ secrets.OPENSDLC_PLUGIN_TOKEN }}
+      - name: Fetch main's baseline
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow opensdlc-evals.yml --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$run" ]; then
+            gh run download "$run" --repo "$GITHUB_REPOSITORY" --name opensdlc-evals --dir "$RUNNER_TEMP/baseline"
+          else
+            echo "::warning::No passing eval run on main yet, so only the floor gates this run."
+          fi
+      - name: Run the suite and gate on a drop against main
+        run: python -P -m opensdlc eval --baseline "$RUNNER_TEMP/baseline/evals.json" --plugin-dir "$PLUGIN_DIR"
+        env:
+          PLUGIN_DIR: ${{ steps.plugin.outputs.dir }}
+          PYTHONPATH: ${{ github.workspace }}/.opensdlc/cli
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: opensdlc-evals
+          path: .opensdlc/out/evals.json
+          include-hidden-files: true
