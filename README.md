@@ -88,6 +88,8 @@ Then, in the repository you want to run this way:
 
 `adopt` copies the template without overwriting anything, tailors `AGENTS.md` and `.opensdlc/config.json` to the codebase, and walks you through [the setup checklist](plugin/skills/adopt/checklist.md): secrets, environments, branch protection, and the order to switch stages on.
 
+OpenSDLC doesn't care what you build or where it runs. A repository plugs in by naming its build, test and lint commands and one command that starts the app; `adopt` fills these in, and the `make` targets in the template are placeholders. The checklist also covers [teams of one or two](plugin/skills/adopt/checklist.md#teams-of-one-or-two).
+
 CI never loads whatever the marketplace holds today. Every workflow checks out the OpenSDLC repository at the tag or commit `plugin` names in `.opensdlc/config.json`, so an upgrade is a PR the eval suite runs on, and every PR and commit the pipeline opens records the version that wrote it.
 
 ## Principles
@@ -102,7 +104,7 @@ CI never loads whatever the marketplace holds today. Every workflow checks out t
 - Shell write detection parses commands; it cannot see inside a script the agent runs. The OS sandbox in CI and in [docs/managed-settings.example.json](docs/managed-settings.example.json) is the layer that stops those.
 - Environment gates match command and tool patterns. Treat them as a guardrail on top of GitHub environment protection and short-lived credentials, not a replacement.
 - `@claude` is the one agent with write access, because it pushes fixes to the PR it was asked about. Only repository members can invoke it.
-- `OPENSDLC_PR_TOKEN` is required. PRs opened with the default `GITHUB_TOKEN` would not trigger the checks they need before they can merge.
+- `OPENSDLC_PR_TOKEN` is required, and must belong to a GitHub App or a machine account. PRs opened with the default `GITHUB_TOKEN` would not trigger the checks they need before they can merge, and PRs opened with your own token are yours, so you could not approve them.
 
 ## Getting help and contributing
 

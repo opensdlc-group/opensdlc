@@ -2,6 +2,19 @@
 
 OpenSDLC follows [Semantic Versioning](https://semver.org). Until 1.0, a minor version can change how a stage behaves; read the notes before you move your pin.
 
+## Unreleased
+
+### Added
+
+- A setup for teams of one or two in the adopt checklist: plans wait for approval only at `high` risk, the gate runs on a different model, merges don't wait, and walk-throughs carry screenshots for UI changes.
+- Two small-team indicators: human commits on agent pull requests, and approvals labelled as ceremony.
+
+### Changed
+
+- `OPENSDLC_PR_TOKEN` must belong to a GitHub App or a machine account, never a person.
+- Pipeline commits are authored by `github-actions[bot]`, not by whoever triggered the workflow.
+- The README says OpenSDLC is stack-agnostic, and that the template's `make` targets are placeholders.
+
 ## 0.6.0 (2026-11-10)
 
 The first public release.
