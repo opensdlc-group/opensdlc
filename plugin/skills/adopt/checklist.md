@@ -19,7 +19,7 @@
 ## Secrets and variables (admin)
 - [ ] Install the Claude GitHub App on the repository.
 - [ ] Secret `ANTHROPIC_API_KEY` (or switch the workflows to `claude_code_oauth_token` or workload identity federation).
-- [ ] Secret `OPENSDLC_PR_TOKEN` (required): a GitHub App or fine-grained token with contents and pull-requests write, and no workflows permission. OpenSDLC opens every PR with it, so the PRs trigger the checks and can request team reviews.
+- [ ] Secret `OPENSDLC_PR_TOKEN` (required): a GitHub App's token, or a fine-grained token on a machine account, with contents and pull-requests write and no workflows permission. Never a person's own token: OpenSDLC opens every PR with it, and GitHub never lets a PR's author approve it. The PRs then trigger the checks and can request team reviews.
 - [ ] Secret `OPENSDLC_ORG_TOKEN`: read access to organization team membership, so the approvals check can resolve `@org/team` groups. Not needed if `approvals.groups` lists logins only.
 - [ ] `plugin` in `.opensdlc/config.json`: the OpenSDLC repository and the tag or commit every workflow loads, e.g. `{"repository": "opensdlc-group/opensdlc", "ref": "v0.6.0"}`. Upgrade by changing it in a PR, which runs the eval suite before anyone merges it.
 - [ ] Optional: secret `OPENSDLC_PLUGIN_TOKEN` if the plugin repository `plugin.repository` names is private: a fine-grained token with read access to that repository's contents and nothing else.
@@ -38,6 +38,32 @@
 - [ ] Where your plan allows, add `opensdlc-checks.yml` and `opensdlc-approvals.yml` as required workflows in a ruleset pinned to the default branch.
 - [ ] Require the checks `artifacts`, `plan-match`, `approvals`, `review`, `secret-scan`, `dependency-scan`, `static-analysis`, and your CI.
 - [ ] Set `planMatch.required` to `true` once every code PR names its change with `Change: <id>`.
+
+## Teams of one or two
+Every approval rule above assumes someone other than the author is free to review. With one or two people, approving every artifact becomes the queue the work waits in. Drop the wait, not the look: approve what carries risk, and read the rest after it merges.
+
+```json
+"approvals": {
+  "groups": { "owners": ["your-login"] },
+  "rules": {
+    "intent": { "require": ["owners"] },
+    "spec": { "require": ["owners"] },
+    "plan": { "require": [], "high": ["owners"] }
+  }
+},
+"stages": {
+  "gate": { "model": "opus" }
+}
+```
+
+- [ ] One group naming the people, used by every rule, and the same logins in place of the teams in `CODEOWNERS`.
+- [ ] Plans wait for approval only when `/opensdlc:plan` rates them `high` risk. Intents and specs keep their approval.
+- [ ] `stages.gate.model` names a different model from the one specs and plans run on, which is the account's default unless `stages.spec.model` and `stages.plan.model` say otherwise, so the gate doesn't share the author's blind spots. A larger gate model costs more per session.
+- [ ] Required approvals on the branch ruleset set to 0, with `approvals` a required check, so the rules above decide who approves. Code-owner review still applies to `.github/`, `knowledge/` and `docs/adr/`.
+- [ ] `AGENTS.md`: every pull request description carries a walk-through of what changed and why, with screenshots for any change to the UI. Read them after the merge; that's where you catch what no check measures.
+- [ ] Label `ceremony`, added to any pull request whose approval taught you nothing. After a month, `opensdlc metrics` shows which approvals to drop.
+
+A plan that needs no approval still needs merging; that click is the one wait left.
 
 ## Managed settings (platform team)
 - [ ] Deploy [managed-settings.example.json](https://github.com/opensdlc-group/opensdlc/blob/main/docs/managed-settings.example.json), adapted, through MDM or the admin console. It force-enables the plugin so its hooks keep running under `allowManagedHooksOnly`, and turns on the sandbox for local sessions.

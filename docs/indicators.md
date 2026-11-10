@@ -40,6 +40,17 @@ Two tracker proxies cover the stages that had no artifact before adoption. They 
 | Ticket opened to closed | Plan | lagging | days | down | `tickets` | `proxy.ticket-lead-time` |
 | Ticket opened to first pull request | Design | leading | days | down | `tickets`, `prs` | `proxy.ticket-to-first-pr` |
 
+## Small teams
+
+Two more measures for a team of one or two, to show where people still step in and which approvals could go. Interventions reads the agent pull requests `metrics.agents` identifies; ceremony reads the `ceremony` label:
+
+| Indicator | Stage | Kind | Unit | Better | Needs | ID |
+| :- | :- | :- | :- | :- | :- | :- |
+| Human commits on agent pull requests | Build | lagging | per PR | down | `prs` | `small-team.interventions` |
+| Approvals labelled as ceremony | Deploy | leading | share | down | `prs` | `small-team.ceremony` |
+
+Time from intent to merge mostly measures how long work waited for someone. Read it next to these and `build.rework-cycles`.
+
 ## Sources that need your backend
 
 Concurrent sessions and hook blocks come from Claude Code's OpenTelemetry export, and Claude Security findings from its exports. OpenSDLC does not assume a backend; configure a command that prints JSON:

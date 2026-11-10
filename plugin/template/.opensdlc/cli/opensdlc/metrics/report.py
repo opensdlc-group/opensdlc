@@ -5,7 +5,7 @@ from dataclasses import asdict
 from datetime import datetime, timedelta
 
 from .dataset import Dataset
-from .indicators import BASELINE_PROXIES, INDICATORS, Indicator, Measurement
+from .indicators import INDICATORS, SUPPLEMENTS, Indicator, Measurement
 from .records import Window
 
 STAGES = ("Plan", "Design", "Build", "Test", "Deploy", "Maintain")
@@ -64,8 +64,7 @@ def build(data: Dataset, end: datetime, days: int, adopted: datetime | None = No
         "collected": sum(r["current"]["status"] != "unavailable" for r in rows),
         "total": len(rows),
         "indicators": rows,
-        "proxies": [row(i, data, current, previous, baseline) for i in BASELINE_PROXIES],
-    }
+    } | {s.key: [row(i, data, current, previous, baseline) for i in s.indicators] for s in SUPPLEMENTS}
 
 
 def table(rows: list[dict], with_baseline: bool) -> list[str]:
@@ -92,9 +91,10 @@ def markdown(report: dict) -> str:
     ]
     for stage in STAGES:
         lines += ["", f"### {stage}", ""] + table([r for r in report["indicators"] if r["stage"] == stage], with_baseline)
-    lines += ["", "### Baseline proxies", "", "Tracker measures that mean the same before and after adoption.", ""]
-    lines += table(report["proxies"], with_baseline)
-    every = report["indicators"] + report["proxies"]
+    every = list(report["indicators"])
+    for supplement in SUPPLEMENTS:
+        lines += ["", f"### {supplement.title}", "", supplement.summary, ""] + table(report[supplement.key], with_baseline)
+        every += report[supplement.key]
     missing = sorted({need for r in every if r["current"]["status"] == "unavailable" for need in r["current"]["detail"].split("; ")})
     if missing:
         lines += ["", "### To collect the rest", ""] + [f"- {need}" for need in missing]

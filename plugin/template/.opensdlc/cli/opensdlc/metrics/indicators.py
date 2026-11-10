@@ -548,4 +548,38 @@ class TicketToFirstPr(Indicator):
         return Measurement.of(median(days), len(days), "median")
 
 
-BASELINE_PROXIES: list[Indicator] = [TicketLeadTime(), TicketToFirstPr()]
+class Interventions(Indicator):
+    id, stage, play, kind = "small-team.interventions", "Build", "Small teams", "lagging"
+    title, unit, better, needs = "Human commits on agent pull requests", "per PR", "down", ("prs",)
+    note = "Counts commits by anyone outside metrics.agents.logins on merged agent pull requests."
+
+    def compute(self, data, window):
+        prs = [p for p in data.prs if p.agent and p.merged in window]
+        counts = [sum(c.author not in data.agent_logins for c in p.commits) for p in prs]
+        return Measurement.of(mean(counts), len(counts), f"{sum(map(bool, counts))} of {len(counts)} needed a person")
+
+
+class Ceremony(Indicator):
+    id, stage, play, kind = "small-team.ceremony", "Deploy", "Small teams", "leading"
+    title, unit, better, needs = "Approvals labelled as ceremony", "share", "down", ("prs",)
+    note = "Label a pull request `ceremony` when approving it taught you nothing."
+
+    def compute(self, data, window):
+        approved = [p for p in data.prs if p.merged in window and any(r.state == "APPROVED" for r in p.reviews)]
+        return Measurement.of(share(sum("ceremony" in p.labels for p in approved), len(approved)), len(approved))
+
+
+@dataclass(frozen=True)
+class Supplement:
+    key: str
+    title: str
+    summary: str
+    indicators: list[Indicator]
+
+
+SUPPLEMENTS: list[Supplement] = [
+    Supplement("proxies", "Baseline proxies", "Tracker measures that mean the same before and after adoption.",
+               [TicketLeadTime(), TicketToFirstPr()]),
+    Supplement("smallTeam", "Small teams", "Where a team of one or two still steps in, and which approvals it could drop.",
+               [Interventions(), Ceremony()]),
+]

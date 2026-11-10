@@ -76,7 +76,7 @@ class Registry(unittest.TestCase):
 
     def test_the_catalog_documents_every_indicator(self):
         catalog = (Path(__file__).resolve().parent.parent / "docs" / "indicators.md").read_text()
-        for i in ind.INDICATORS + ind.BASELINE_PROXIES:
+        for i in ind.INDICATORS + [i for s in ind.SUPPLEMENTS for i in s.indicators]:
             self.assertIn(f"`{i.id}`", catalog, i.id)
             self.assertIn(i.title, catalog, i.id)
 
@@ -329,6 +329,22 @@ class Baseline(unittest.TestCase):
         rows = {r["id"]: r for r in build(data, END, 30)["proxies"]}
         self.assertEqual(rows["proxy.ticket-lead-time"]["current"]["value"], 8)
         self.assertEqual(rows["proxy.ticket-to-first-pr"]["current"]["value"], 2)
+
+    def test_small_team_indicators(self):
+        data = empty()
+        data.agent_logins = frozenset({"opensdlc-bot[bot]"})
+        data.prs = [
+            pr(1, merged=at(4), agent=True, commits=[Commit("opensdlc-bot[bot]", at(5)), Commit("glenn", at(4, 1)), Commit("glenn", at(4, 2))]),
+            pr(2, merged=at(4), agent=True, commits=[Commit("opensdlc-bot[bot]", at(5))],
+               reviews=[Review("glenn", "APPROVED", at(4))], labels=["ceremony"]),
+            pr(3, merged=at(4), reviews=[Review("glenn", "APPROVED", at(4))]),
+            pr(4, merged=at(4), reviews=[Review("glenn", "COMMENTED", at(4))], labels=["ceremony"]),
+        ]
+        rows = {r["id"]: r for r in build(data, END, 30)["smallTeam"]}
+        self.assertEqual(rows["small-team.interventions"]["current"]["value"], 1)
+        self.assertEqual(rows["small-team.interventions"]["current"]["detail"], "1 of 2 needed a person")
+        self.assertEqual(rows["small-team.ceremony"]["current"]["value"], 0.5)
+        self.assertIn("### Small teams", markdown(build(data, END, 30)))
 
     def test_proxies_say_what_they_need(self):
         result = build(empty(), END, 30)
