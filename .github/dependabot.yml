@@ -13,6 +13,14 @@ updates:
       actions:
         patterns: ["*"]
   - package-ecosystem: npm
+    directory: /.github/ci/claude-code
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /.github/ci/python
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
     directories:
       - /bench/scenarios/*/targets/*/skeleton
     schedule:

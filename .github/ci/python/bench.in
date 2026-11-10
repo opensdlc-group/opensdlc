@@ -1,0 +1,4 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+playwright==1.63.0
