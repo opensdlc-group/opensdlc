@@ -332,10 +332,10 @@ class Baseline(unittest.TestCase):
 
     def test_small_team_indicators(self):
         data = empty()
-        data.agent_logins = frozenset({"opensdlc-bot[bot]"})
+        data.agent_logins = frozenset({"github-actions[bot]"})
         data.prs = [
-            pr(1, merged=at(4), agent=True, commits=[Commit("opensdlc-bot[bot]", at(5)), Commit("glenn", at(4, 1)), Commit("glenn", at(4, 2))]),
-            pr(2, merged=at(4), agent=True, commits=[Commit("opensdlc-bot[bot]", at(5))],
+            pr(1, merged=at(4), agent=True, commits=[Commit("github-actions[bot]", at(5)), Commit("glenn", at(4, 1)), Commit("glenn", at(4, 2))]),
+            pr(2, merged=at(4), agent=True, commits=[Commit("github-actions[bot]", at(5)), Commit("", at(5, 1))],
                reviews=[Review("glenn", "APPROVED", at(4))], labels=["ceremony"]),
             pr(3, merged=at(4), reviews=[Review("glenn", "APPROVED", at(4))]),
             pr(4, merged=at(4), reviews=[Review("glenn", "COMMENTED", at(4))], labels=["ceremony"]),

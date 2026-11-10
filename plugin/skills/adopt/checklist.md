@@ -57,9 +57,10 @@ Every approval rule above assumes someone other than the author is free to revie
 ```
 
 - [ ] One group naming the people, used by every rule, and the same logins in place of the teams in `CODEOWNERS`.
-- [ ] Plans wait for approval only when `/opensdlc:plan` rates them `high` risk. Intents and specs keep their approval.
+- [ ] Plans wait for approval only when `/opensdlc:plan` rates them `high` risk. The gate checks that rating and escalates a plan that touches auth, payments, PII, migrations or infrastructure without it. Intents and specs keep their approval.
 - [ ] `stages.gate.model` names a different model from the one specs and plans run on, which is the account's default unless `stages.spec.model` and `stages.plan.model` say otherwise, so the gate doesn't share the author's blind spots. A larger gate model costs more per session.
 - [ ] Required approvals on the branch ruleset set to 0, with `approvals` a required check, so the rules above decide who approves. Code-owner review still applies to `.github/`, `knowledge/` and `docs/adr/`.
+- [ ] A team of one: add yourself to the ruleset's bypass list, for pull requests only. Agents can't touch `.github/`, `knowledge/` or `docs/adr/`, so those changes are yours, and nobody can approve their own pull request.
 - [ ] `AGENTS.md`: every pull request description carries a walk-through of what changed and why, with screenshots for any change to the UI. Read them after the merge; that's where you catch what no check measures.
 - [ ] Label `ceremony`, added to any pull request whose approval taught you nothing. After a month, `opensdlc metrics` shows which approvals to drop.
 

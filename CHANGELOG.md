@@ -12,6 +12,7 @@ OpenSDLC follows [Semantic Versioning](https://semver.org). Until 1.0, a minor v
 ### Changed
 
 - `OPENSDLC_PR_TOKEN` must belong to a GitHub App or a machine account, never a person.
+- Pipeline commits are authored by `github-actions[bot]`, not by whoever triggered the workflow.
 - The README says OpenSDLC is stack-agnostic, and that the template's `make` targets are placeholders.
 
 ## 0.6.0 (2026-11-10)

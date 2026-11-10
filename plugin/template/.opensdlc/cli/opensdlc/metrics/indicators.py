@@ -551,11 +551,11 @@ class TicketToFirstPr(Indicator):
 class Interventions(Indicator):
     id, stage, play, kind = "small-team.interventions", "Build", "Small teams", "lagging"
     title, unit, better, needs = "Human commits on agent pull requests", "per PR", "down", ("prs",)
-    note = "Counts commits by anyone outside metrics.agents.logins on merged agent pull requests."
+    note = "Counts commits by a GitHub login outside metrics.agents.logins on merged agent pull requests."
 
     def compute(self, data, window):
         prs = [p for p in data.prs if p.agent and p.merged in window]
-        counts = [sum(c.author not in data.agent_logins for c in p.commits) for p in prs]
+        counts = [sum(bool(c.author) and c.author not in data.agent_logins for c in p.commits) for p in prs]
         return Measurement.of(mean(counts), len(counts), f"{sum(map(bool, counts))} of {len(counts)} needed a person")
 
 

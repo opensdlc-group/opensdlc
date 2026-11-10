@@ -42,7 +42,7 @@ Two tracker proxies cover the stages that had no artifact before adoption. They 
 
 ## Small teams
 
-Two more measures for a team of one or two, to show where people still step in and which approvals could go. Interventions reads the agent pull requests `metrics.agents` identifies; ceremony reads the `ceremony` label:
+Two more measures for a team of one or two, to show where people still step in and which approvals could go. Interventions reads the agent pull requests `metrics.agents` identifies, where the pipeline's own commits are authored by `github-actions[bot]`; ceremony reads the `ceremony` label:
 
 | Indicator | Stage | Kind | Unit | Better | Needs | ID |
 | :- | :- | :- | :- | :- | :- | :- |
