@@ -12,11 +12,12 @@ Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Set up
 
-You need Python 3.12 or later and git. The CLI, hooks and bench use the standard library only. To run the bench and the skill evals you also need [Claude Code](https://code.claude.com), and for the api and web bench targets, Node 22. Workflow linting needs [actionlint](https://github.com/rhysd/actionlint).
+You need Python 3.12 or later and git. The CLI, hooks and bench use the standard library only. To run the bench and the skill evals you also need [Claude Code](https://code.claude.com), and for the api and web bench targets, Node 22. Linting needs [Ruff](https://docs.astral.sh/ruff/) for Python and [actionlint](https://github.com/rhysd/actionlint) for workflows. CI installs its tools from the hash-locked files in `.github/ci/`.
 
 Check everything before you open a pull request:
 
 ```
+ruff check --select E9,F --target-version py312 .
 PYTHONPATH=plugin/template/.opensdlc/cli python3 -m unittest discover -s tests
 claude plugin validate .
 claude plugin validate ./plugin
