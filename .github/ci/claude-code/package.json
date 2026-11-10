@@ -1,0 +1,8 @@
+{
+  "name": "opensdlc-ci-claude-code",
+  "private": true,
+  "description": "The Claude Code version CI validates the plugin with, locked by hash.",
+  "dependencies": {
+    "@anthropic-ai/claude-code": "2.1.316"
+  }
+}

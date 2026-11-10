@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
+      - run: pip install --require-hashes -r .github/ci/python/lint.txt
+      - run: ruff check --select E9,F --target-version py312 .
       - run: python -m unittest discover -s tests
         env:
           PYTHONPATH: plugin/template/.opensdlc/cli
@@ -31,11 +33,12 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: "22"
-      - run: npm install -g @anthropic-ai/claude-code@2.1.316
+      - run: npm ci --prefix .github/ci/claude-code
       - name: The marketplace and the plugin validate
         run: |
-          claude plugin validate .
-          claude plugin validate ./plugin
+          claude=.github/ci/claude-code/node_modules/.bin/claude
+          "$claude" plugin validate .
+          "$claude" plugin validate ./plugin
 
   workflows:
     runs-on: ubuntu-latest
@@ -69,7 +72,7 @@ jobs:
         with:
           node-version: "22"
       - run: |
-          pip install playwright==1.63.0
+          pip install --require-hashes -r .github/ci/python/bench.txt
           python -m playwright install --with-deps chromium
       - name: Every target's reference passes CI and every acceptance check
         run: python bench verify
