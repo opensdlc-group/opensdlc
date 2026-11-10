@@ -7,6 +7,7 @@
 
 [![Test](https://github.com/opensdlc-group/opensdlc/actions/workflows/test.yml/badge.svg)](https://github.com/opensdlc-group/opensdlc/actions/workflows/test.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/opensdlc-group/opensdlc/badge)](https://scorecard.dev/viewer/?uri=github.com/opensdlc-group/opensdlc)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16515/badge)](https://www.bestpractices.dev/projects/16515)
 [![License](https://img.shields.io/badge/license-Apache%202.0-informational)](LICENSE)
 
 An open-source AI-native SDLC. Work moves through a loop of committed artifacts (`intent.md` → `spec.md` → `plan.md` → diff → review → incident → `intent.md`), each accepted artifact starts the next stage, and every control is either deterministic code or a human gate. The artifacts, checks and approval rules are plain files and a dependency-free CLI, so they belong to no one agent. The first implementation of the agent side runs on Claude Code.
