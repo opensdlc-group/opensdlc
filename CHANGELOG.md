@@ -8,6 +8,8 @@ OpenSDLC follows [Semantic Versioning](https://semver.org). Until 1.0, a minor v
 
 - A setup for teams of one or two in the adopt checklist: plans wait for approval only at `high` risk, the gate runs on a different model, merges don't wait, and walk-throughs carry screenshots for UI changes.
 - Two small-team indicators: human commits on agent pull requests, and approvals labelled as ceremony.
+- Links between knowledge documents: `requires` brings a document's dependencies into every context that selects it, and `supersedes` retires the documents it replaces. `check` fails on broken links and loops.
+- `knowledge.tags`, an optional list of the tags a repository allows; `check` fails on any other tag in a document or an intent.
 
 ### Changed
 

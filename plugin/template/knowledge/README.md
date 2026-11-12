@@ -26,11 +26,26 @@ tags: api, auth                    # selected when the intent's tags include one
 paths: src/api/**, **/routes/**    # selected when the plan or PR touches a matching file
 stages: spec, plan, review         # defaults to every stage
 always: false                      # true selects it for every change
+requires: 0007-token-format        # documents this one cannot be read without, by name
+supersedes: 0003-session-cookies   # documents this one replaces, by name
 skill: secure-api-review           # policies only; generates .claude/skills/<skill>/SKILL.md
 ---
 ```
 
 `review-by` and `status` changes do not invalidate pins: reviewing a document without changing it leaves accepted specs alone.
+
+## Links
+
+A document's name is its `name` field, or its file name without `.md`. Two fields link documents by name, so the knowledge base is a graph that selection walks:
+
+- `requires`: when this document is selected, so is every document it requires, and theirs in turn, whatever their own `systems`, `tags`, `paths` and `stages` say. The context lists each as `required by <name>`, and it is pinned like any other.
+- `supersedes`: the documents named here are never selected again. Keep them for the record.
+
+`check` fails on a link to a document that does not exist, on a loop of requirements, and on a requirement of a superseded document. Keep each document to one rule or one decision, and link them: a stage then reads what the change needs and nothing else.
+
+## Tags
+
+Set `knowledge.tags` in `.opensdlc/config.json` to the list of tags this repository uses. `check` then fails on any other tag in a document or an intent, so a misspelt tag cannot silently stop a document from being selected. Without the list, any tag is accepted.
 
 ## Policies become skills
 
