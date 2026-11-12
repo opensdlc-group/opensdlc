@@ -1,7 +1,7 @@
 {
   "name": "opensdlc",
   "displayName": "OpenSDLC",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "An AI-native SDLC as a loop of committed artifacts (intent.md, spec.md, plan.md, diff, review, incident) with deterministic guardrails, human approval gates and the playbook's leading and lagging indicators. Self-contained: no other plugins required.",
   "author": {
     "name": "The OpenSDLC Authors"
