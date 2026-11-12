@@ -12,7 +12,7 @@
   - [ ] `stages.<stage>.model` for any stage that should not run on the account's default model, such as `"haiku"`.
   - [ ] `metrics`: agent signals, CI workflow, incident source, release gate job, ticket label, and `adoptedAt` (today) so the report keeps a pre-adoption baseline.
 - [ ] `AGENTS.md`: real commands with healthy output, under a page.
-- [ ] `knowledge/`: the policies, architecture notes and domain rules a spec must respect, each with an owner and a `review-by` date. Run `python3 -m opensdlc skills` after adding a policy with `skill`.
+- [ ] `knowledge/`: the policies, architecture notes and domain rules a spec must respect, each with an owner and a `review-by` date, one rule or decision per document, linked with `requires`. List the tags you use in `knowledge.tags`. Run `python3 -m opensdlc skills` after adding a policy with `skill`.
 - [ ] `rollback-deploy.yml`: the real rollback command, or the monitor's `runbooks` list emptied.
 - [ ] The CI workflow name in `opensdlc-ci-triage.yml` and the `ci-failure-rate` monitor matches this repo's CI workflow.
 

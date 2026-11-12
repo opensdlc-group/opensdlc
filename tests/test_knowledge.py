@@ -82,6 +82,59 @@ class Selection(unittest.TestCase):
         self.assertIn("`GLOSSARY.md`: read for every stage", manifest)
 
 
+class Links(unittest.TestCase):
+    def setUp(self):
+        self.root = temp_project(CONFIG)
+        policy(self.root, tags="claims", requires="0002-tokens")
+        doc(self.root, "docs/adr/0001-sessions.md", {"kind": "decision", "paths": "src/auth/**"})
+        doc(self.root, "docs/adr/0002-tokens.md", {"kind": "decision", "supersedes": "0001-sessions", "requires": "0003-keys"})
+        doc(self.root, "docs/adr/0003-keys.md", {"kind": "decision", "stages": "review"})
+        self.change = change(self.root, intent="accepted", spec="draft", plan="draft")
+
+    def knowledge(self, config=CONFIG):
+        return Knowledge(self.root, config, TODAY)
+
+    def messages(self, config=CONFIG):
+        return [f.message for f in self.knowledge(config).problems()]
+
+    def test_a_selected_document_brings_what_it_requires(self):
+        found = {s.path: s for s in self.knowledge().select(self.change, "spec")}
+        self.assertEqual(found["docs/adr/0002-tokens.md"].reasons, ["required by secure-api"])
+        self.assertEqual(found["docs/adr/0003-keys.md"].reasons, ["required by 0002-tokens"])
+        self.assertIn("docs/adr/0003-keys.md", self.knowledge().context_for(self.change, "spec"))
+
+    def test_a_superseded_document_is_never_selected(self):
+        found = [s.path for s in self.knowledge().select(self.change, "review", ["src/auth/login.py"])]
+        self.assertNotIn("docs/adr/0001-sessions.md", found)
+
+    def test_a_document_keeps_its_own_reasons_when_also_required(self):
+        doc(self.root, "docs/adr/0002-tokens.md", {"kind": "decision", "tags": "claims"})
+        found = {s.path: s for s in self.knowledge().select(self.change, "spec")}
+        self.assertEqual(found["docs/adr/0002-tokens.md"].reasons, ["tag claims", "required by secure-api"])
+
+    def test_sound_links_pass_the_check(self):
+        self.assertEqual([m for m in self.messages() if "requires" in m or "supersede" in m], [])
+
+    def test_broken_links_fail_the_check(self):
+        doc(self.root, "docs/adr/0003-keys.md", {"kind": "decision", "requires": "missing, 0001-sessions", "supersedes": "0003-keys"})
+        messages = self.messages()
+        self.assertIn("docs/adr/0003-keys.md: requires unknown document 'missing'", messages)
+        self.assertIn("docs/adr/0003-keys.md: requires '0001-sessions', which '0002-tokens' supersedes", messages)
+        self.assertIn("docs/adr/0003-keys.md: a document cannot supersede itself", messages)
+
+    def test_a_loop_of_requirements_fails_the_check_once(self):
+        doc(self.root, "docs/adr/0003-keys.md", {"kind": "decision", "requires": "secure-api"})
+        loops = [m for m in self.messages() if "forms a loop" in m]
+        self.assertEqual(loops, ["knowledge: requires forms a loop: 0002-tokens → 0003-keys → secure-api → 0002-tokens"])
+
+    def test_tags_outside_the_configured_list_fail_the_check(self):
+        config = {"knowledge": {**CONFIG["knowledge"], "tags": ["api", "billing"]}}
+        self.assertIn("knowledge/policies/secure-api.md: tag 'claims' is not in knowledge.tags", self.messages(config))
+        self.assertEqual([f.message for f in self.knowledge(config).change_problems(self.change)],
+                         [f"{self.change.id}/intent.md: tag 'claims' is not in knowledge.tags"])
+        self.assertEqual([m for m in self.messages() if "knowledge.tags" in m], [])
+
+
 class Health(unittest.TestCase):
     def test_required_fields_by_kind(self):
         root = temp_project(CONFIG)
