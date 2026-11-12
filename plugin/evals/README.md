@@ -29,12 +29,13 @@ From the repository root:
 ```
 claude plugin eval plugin --scaffold --ablation none --trust-plugin \
   --allow-tools Write Edit "Bash(git diff:*)" "Bash(git status:*)" "Bash(git log:*)" \
-  "Bash(make build)" "Bash(make test)" "Bash(make lint)" "Bash(./todo:*)"
+  "Bash(make build)" "Bash(make test)" "Bash(make lint)" "Bash(./todo:*)" "Bash(TODO_FILE=* ./todo *)"
 ```
 
 - `--scaffold` lets each case build its repository. The scaffolds copy files and make git commits, nothing else.
 - `--ablation none` skips the run without the plugin: the prompts invoke the plugin's skills the way the pipeline does, so a run without it has nothing to compare.
 - `--allow-tools` grants what the pipeline grants these stages. Evals allow only read-only tools unless the command line grants more.
+- The harness runs each case in its own sandbox, and refuses to grant Bash where it cannot keep credential stores out of reach. Where it cannot run a case, run the case's prompt with `claude -p` in a repository built by its `fixture.sh`, with the same tools allowed, and check the output against the case's grader by hand.
 - Add `--case '<glob>'` to run some cases, and `--runs 1` for a quick look. Each case runs on Sonnet three times by default; `--model haiku` or `--model opus` runs the same suite on another model, which the skill authoring guidance asks for before a skill ships.
 
 The bench says whether a change to the skills makes the software better. These cases say, quickly, whether a change to one skill does what it was meant to, so run them first and spend a bench batch only on a change that passes.

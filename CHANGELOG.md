@@ -2,7 +2,7 @@
 
 OpenSDLC follows [Semantic Versioning](https://semver.org). Until 1.0, a minor version can change how a stage behaves; read the notes before you move your pin.
 
-## Unreleased
+## 0.7.0 (2026-11-12)
 
 ### Added
 
