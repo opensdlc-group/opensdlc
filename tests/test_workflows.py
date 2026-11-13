@@ -109,6 +109,12 @@ class AgentJobs(unittest.TestCase):
                 if "create-pull-request" in body:
                     self.assertIn("uses: ./.github/actions/opensdlc-apply", body, f"{path.name}:{name}")
 
+    def test_pipeline_commits_are_authored_by_the_actions_bot(self):
+        for path in sorted(WORKFLOWS.glob("*.yml")):
+            for name, body in split(path)[1].items():
+                if "create-pull-request" in body:
+                    self.assertIn("author: github-actions[bot] <", body, f"{path.name}:{name}")
+
 
 class PinnedPlugin(unittest.TestCase):
     UNPLUGGED = {"opensdlc-ci-triage.yml:agent"}
