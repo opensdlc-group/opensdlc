@@ -4,6 +4,7 @@ updates:
     directories:
       - /
       - /plugin/template
+      - /plugin/template/.github/actions/opensdlc-agent
       - /plugin/template/.github/actions/opensdlc-apply
       - /plugin/template/.github/actions/opensdlc-plugin
       - /plugin/template/.github/actions/opensdlc-sandbox

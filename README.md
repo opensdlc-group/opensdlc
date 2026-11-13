@@ -61,6 +61,8 @@ It implements the process described in Anthropic's [AI-native SDLC playbook](htt
 
 Every agent job is read-only. It checks out without credentials, runs Claude Code inside its OS sandbox with the API key and GitHub tokens hidden from shell commands and network limited to package registries and GitHub, and uploads its work as a patch. A separate job checks the patch against the untouched checkout before applying it: it refuses anything that leaves the stage's scope or change folder, touches what Claude Code, git or the pipeline act on (`.github/`, `.opensdlc/`, `.claude/`, `.mcp.json`, `CLAUDE.md`, `.gitattributes`, knowledge, eval cases), or adds a symlink. Only then does it open the PR. [docs/security-model.md](docs/security-model.md) has the details and what is out of scope.
 
+Every workflow that runs an agent calls one shared step, `.github/actions/opensdlc-agent`. The Claude Code action, its version and its settings are named there and nowhere else; the workflows only hand the step its credentials. A second agent is a change to that step, to `.github/actions/opensdlc-sandbox`, which prepares the runner, and to the eval runner, which starts the agent itself. It also needs a settings file and a version of the skills of its own.
+
 Each job is offered only the tools its permissions name, and its Bash runs only the commands those permissions name, even inside the sandbox. Build runs on Haiku; every other stage and every judge runs on your default model, so a stronger model decides whether the work goes through. [docs/evidence.md](docs/evidence.md) shows what each of these choices did on the benchmark.
 
 ## Measure it
@@ -104,7 +106,7 @@ CI never loads whatever the marketplace holds today. Every workflow checks out t
 - Shell write detection parses commands; it cannot see inside a script the agent runs. The OS sandbox in CI and in [docs/managed-settings.example.json](docs/managed-settings.example.json) is the layer that stops those.
 - Environment gates match command and tool patterns. Treat them as a guardrail on top of GitHub environment protection and short-lived credentials, not a replacement.
 - `@claude` is the one agent with write access, because it pushes fixes to the PR it was asked about. Only repository members can invoke it.
-- `OPENSDLC_PR_TOKEN` is required, and must belong to a GitHub App or a machine account. PRs opened with the default `GITHUB_TOKEN` would not trigger the checks they need before they can merge, and PRs opened with your own token are yours, so you could not approve them.
+- OpenSDLC needs a GitHub identity of its own to open pull requests: a GitHub App, or a token on a machine account. PRs opened with the default `GITHUB_TOKEN` would not trigger the checks they need before they can merge, and PRs opened with your own token are yours, so you could not approve them.
 
 ## Getting help and contributing
 

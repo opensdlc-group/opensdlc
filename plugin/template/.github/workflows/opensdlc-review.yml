@@ -43,17 +43,16 @@ jobs:
         uses: ./.github/actions/opensdlc-plugin
         with:
           token: ${{ secrets.OPENSDLC_PLUGIN_TOKEN }}
-      - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+      - uses: ./.github/actions/opensdlc-agent
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ github.token }}
-          settings: .opensdlc/ci-settings.json
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github-token: ${{ github.token }}
           prompt: /opensdlc:review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} (headless)
-          claude_args: >-
-            --plugin-dir "${{ steps.plugin.outputs.dir }}"
-            --max-turns 60
-            --allowedTools "Read,Edit(.opensdlc/out/**),Glob,Grep,Agent,Skill,Bash(git diff *),Bash(git log *),Bash(git show *),Bash(git merge-base *),Bash(git rev-parse *)"
-            --tools "Read,Edit,Write,Glob,Grep,Agent,Skill,Bash"
+          plugin: ${{ steps.plugin.outputs.dir }}
+          max-turns: 60
+          allowed-tools: "Read,Edit(.opensdlc/out/**),Glob,Grep,Agent,Skill,Bash(git diff *),Bash(git log *),Bash(git show *),Bash(git merge-base *),Bash(git rev-parse *)"
+          tools: "Read,Edit,Write,Glob,Grep,Agent,Skill,Bash"
       - name: Keep the tally
         run: |
           mkdir -p "$RUNNER_TEMP/agent-out"

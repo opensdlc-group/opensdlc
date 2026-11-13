@@ -3,6 +3,7 @@ updates:
   - package-ecosystem: github-actions
     directories:
       - /
+      - /.github/actions/opensdlc-agent
       - /.github/actions/opensdlc-apply
       - /.github/actions/opensdlc-plugin
       - /.github/actions/opensdlc-sandbox
