@@ -38,17 +38,16 @@ jobs:
         uses: ./.github/actions/opensdlc-plugin
         with:
           token: ${{ secrets.OPENSDLC_PLUGIN_TOKEN }}
-      - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+      - uses: ./.github/actions/opensdlc-agent
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ github.token }}
-          settings: .opensdlc/ci-settings.json
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github-token: ${{ github.token }}
           prompt: /opensdlc:intent --ticket .opensdlc/out/ticket.md
-          claude_args: >-
-            --plugin-dir "${{ steps.plugin.outputs.dir }}"
-            --max-turns 30
-            --allowedTools "Read,Glob,Grep,Skill,Edit(changes/**),Edit(.opensdlc/out/escalate.md)"
-            --tools "Read,Glob,Grep,Skill,Edit,Write"
+          plugin: ${{ steps.plugin.outputs.dir }}
+          max-turns: 30
+          allowed-tools: "Read,Glob,Grep,Skill,Edit(changes/**),Edit(.opensdlc/out/escalate.md)"
+          tools: "Read,Glob,Grep,Skill,Edit,Write"
       - name: Capture the agent's work
         env:
           GIT_DIR: ${{ runner.temp }}/pristine.git
@@ -131,10 +130,16 @@ jobs:
             echo "Change: $CHANGE"
             echo "Refs #$NUMBER"
           } > "$RUNNER_TEMP/body.md"
+      - id: bot
+        if: vars.OPENSDLC_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.OPENSDLC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.OPENSDLC_APP_PRIVATE_KEY }}
       - id: pr
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
-          token: ${{ secrets.OPENSDLC_PR_TOKEN }}
+          token: ${{ steps.bot.outputs.token || secrets.OPENSDLC_PR_TOKEN }}
           author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           branch: opensdlc/intake/${{ github.event.issue.number }}
           title: "Intent: ${{ github.event.issue.title }}"

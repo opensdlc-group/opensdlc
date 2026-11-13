@@ -32,10 +32,9 @@ jobs:
         uses: ./.github/actions/opensdlc-plugin
         with:
           token: ${{ secrets.OPENSDLC_PLUGIN_TOKEN }}
-      - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+      - uses: ./.github/actions/opensdlc-agent
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          settings: .opensdlc/ci-settings.json
-          claude_args: >-
-            --plugin-dir "${{ steps.plugin.outputs.dir }}"
-            --max-turns 60
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          plugin: ${{ steps.plugin.outputs.dir }}
+          max-turns: 60

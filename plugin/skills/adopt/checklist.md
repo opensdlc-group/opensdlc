@@ -18,8 +18,12 @@
 
 ## Secrets and variables (admin)
 - [ ] Install the Claude GitHub App on the repository.
-- [ ] Secret `ANTHROPIC_API_KEY` (or switch the workflows to `claude_code_oauth_token` or workload identity federation).
-- [ ] Secret `OPENSDLC_PR_TOKEN` (required): a GitHub App's token, or a fine-grained token on a machine account, with contents and pull-requests write and no workflows permission. Never a person's own token: OpenSDLC opens every PR with it, and GitHub never lets a PR's author approve it. The PRs then trigger the checks and can request team reviews.
+- [ ] One credential for the agent. Set exactly one: an agent job stops if it finds neither, or both.
+  - Secret `ANTHROPIC_API_KEY`, a Claude Console key. The usual choice.
+  - Or secret `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token`. It runs on one person's Claude subscription and spends that person's usage, so it suits a repository only they work in. It lasts a year.
+- [ ] An identity for the pull requests OpenSDLC opens, so they trigger the checks and can request team reviews. Never a person's own token: GitHub never lets a PR's author approve it.
+  - A GitHub App: variable `OPENSDLC_APP_CLIENT_ID` and secret `OPENSDLC_APP_PRIVATE_KEY`. Give the App read and write on Contents and Pull requests, read on organization Members if approval rules name teams, and nothing on Workflows. Install it on this repository only. Each PR job creates its own token, which is revoked when the job ends.
+  - Or secret `OPENSDLC_PR_TOKEN`: a fine-grained token on a machine account, with the same permissions. The workflows use it when the App variable is not set.
 - [ ] Secret `OPENSDLC_ORG_TOKEN`: read access to organization team membership, so the approvals check can resolve `@org/team` groups. Not needed if `approvals.groups` lists logins only.
 - [ ] `plugin` in `.opensdlc/config.json`: the OpenSDLC repository and the tag or commit every workflow loads, e.g. `{"repository": "opensdlc-group/opensdlc", "ref": "v0.7.0"}`. Upgrade by changing it in a PR, which runs the eval suite before anyone merges it.
 - [ ] Optional: secret `OPENSDLC_PLUGIN_TOKEN` if the plugin repository `plugin.repository` names is private: a fine-grained token with read access to that repository's contents and nothing else.

@@ -1,0 +1,70 @@
+# Copyright 2026 The OpenSDLC Authors
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenSDLC agent
+description: Run one agent session. Every workflow that runs an agent calls this step, so the agent is chosen here and nowhere else.
+inputs:
+  prompt:
+    description: What the session is asked to do; empty lets the agent answer the comment that triggered the workflow
+    required: false
+    default: ""
+  plugin:
+    description: Directory of the pinned plugin, from the opensdlc-plugin action; empty runs without it
+    required: false
+    default: ""
+  max-turns:
+    description: Turns the session may take
+    required: true
+  model:
+    description: Model the session runs on; empty uses the account's default
+    required: false
+    default: ""
+  allowed-tools:
+    description: Permission rules for a session with a prompt
+    required: false
+    default: ""
+  tools:
+    description: Built-in tools a session with a prompt is offered, and no others
+    required: false
+    default: ""
+  github-token:
+    description: Token the session reads GitHub with; empty uses the agent's own GitHub App
+    required: false
+    default: ""
+  anthropic-api-key:
+    description: Claude Console API key
+    required: false
+    default: ""
+  claude-code-oauth-token:
+    description: Claude subscription token from `claude setup-token`
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Check the session has exactly one credential
+      shell: bash
+      env:
+        API_KEY: ${{ inputs.anthropic-api-key }}
+        OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
+      run: |
+        if [ -z "$API_KEY$OAUTH_TOKEN" ]; then
+          echo "::error::The agent has no credential. Set the ANTHROPIC_API_KEY secret or the CLAUDE_CODE_OAUTH_TOKEN secret."
+          exit 1
+        fi
+        if [ -n "$API_KEY" ] && [ -n "$OAUTH_TOKEN" ]; then
+          echo "::error::The ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN secrets are both set. Keep one."
+          exit 1
+        fi
+    - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+      with:
+        anthropic_api_key: ${{ inputs.anthropic-api-key }}
+        claude_code_oauth_token: ${{ inputs.claude-code-oauth-token }}
+        github_token: ${{ inputs.github-token }}
+        settings: .opensdlc/ci-settings.json
+        prompt: ${{ inputs.prompt }}
+        claude_args: >-
+          ${{ inputs.plugin && format('--plugin-dir "{0}"', inputs.plugin) || '' }}
+          --max-turns ${{ inputs.max-turns }}
+          ${{ inputs.model && format('--model {0}', inputs.model) || '' }}
+          ${{ inputs.prompt && format('--allowedTools "{0}" --tools "{1}"', inputs.allowed-tools, inputs.tools) || '' }}

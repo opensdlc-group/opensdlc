@@ -2,6 +2,18 @@
 
 OpenSDLC follows [Semantic Versioning](https://semver.org). Until 1.0, a minor version can change how a stage behaves; read the notes before you move your pin.
 
+## Unreleased
+
+### Added
+
+- One shared step, `.github/actions/opensdlc-agent`, runs every agent session. The workflows no longer name the Claude Code action themselves, so a second agent has one step to change.
+- The agent runs on an API key or a subscription token (`CLAUDE_CODE_OAUTH_TOKEN`). A job with neither, or both, stops with a message that says so.
+- The pipeline can open its pull requests as a GitHub App: set `OPENSDLC_APP_CLIENT_ID` and `OPENSDLC_APP_PRIVATE_KEY`, and each PR job creates a token that is revoked when the job ends.
+
+### Fixed
+
+- The setup checklist said a GitHub App's token could be stored as `OPENSDLC_PR_TOKEN`. Those tokens expire within the hour, so it could not. `OPENSDLC_PR_TOKEN` is for a machine account.
+
 ## 0.7.0 (2026-11-12)
 
 ### Added

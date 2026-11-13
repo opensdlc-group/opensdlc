@@ -9,6 +9,7 @@ Every workflow that runs Claude headlessly, except `@claude`, splits into a read
 **The agent job** has `contents: read` and nothing that writes.
 
 - `actions/checkout` runs with `persist-credentials: false`, so no token sits in `.git/config`.
+- Claude Code runs through one shared step, `.github/actions/opensdlc-agent`, which holds the pinned action and stops the job unless it has exactly one credential.
 - Claude Code runs with `.opensdlc/ci-settings.json`:
   - Bash runs inside the OS sandbox (`bubblewrap` and `socat`, installed by `.github/actions/opensdlc-sandbox`), and Claude Code refuses to start if the sandbox is unavailable.
   - Shell commands cannot see `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN` or the Actions runtime and OIDC tokens.
@@ -37,7 +38,7 @@ Every workflow that runs Claude headlessly, except `@claude`, splits into a read
   - creates more than one change folder, or edits an existing one, when the run may only start a new change (intake and monitors);
   - adds a symlink or submodule.
 - Only then is the patch applied to the workspace. Every CLI call runs as `python -P`, so a module the patch adds at the repository root cannot shadow the CLI or the standard library.
-- It pins, proposes acceptance unless the agent escalated, requests the reviewers the approval rules name, and opens the PR with `OPENSDLC_PR_TOKEN`. PR bodies are written from files, never interpolated into shell or `GITHUB_OUTPUT`.
+- It pins, proposes acceptance unless the agent escalated, requests the reviewers the approval rules name, and opens the PR as the pipeline's GitHub App, with a token created for that job and revoked when it ends, or with `OPENSDLC_PR_TOKEN` when no App is set. PR bodies are written from files, never interpolated into shell or `GITHUB_OUTPUT`.
 - Review findings are posted by `opensdlc review-publish`, which validates the reviewer's tally and recounts it rather than trusting its totals.
 
 ## Rules a PR cannot loosen
