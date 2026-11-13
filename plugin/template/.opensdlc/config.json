@@ -1,7 +1,7 @@
 {
   "plugin": {
     "repository": "opensdlc-group/opensdlc",
-    "ref": "v0.7.0"
+    "ref": "v0.7.1"
   },
   "protected": [
     {

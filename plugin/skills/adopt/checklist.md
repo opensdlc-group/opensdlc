@@ -25,7 +25,7 @@
   - A GitHub App: variable `OPENSDLC_APP_CLIENT_ID` and secret `OPENSDLC_APP_PRIVATE_KEY`. Give the App read and write on Contents and Pull requests, read on organization Members if approval rules name teams, and nothing on Workflows. Install it on this repository only. Each PR job creates its own token, which is revoked when the job ends.
   - Or secret `OPENSDLC_PR_TOKEN`: a fine-grained token on a machine account, with the same permissions. The workflows use it when the App variable is not set.
 - [ ] Secret `OPENSDLC_ORG_TOKEN`: read access to organization team membership, so the approvals check can resolve `@org/team` groups. Not needed if `approvals.groups` lists logins only.
-- [ ] `plugin` in `.opensdlc/config.json`: the OpenSDLC repository and the tag or commit every workflow loads, e.g. `{"repository": "opensdlc-group/opensdlc", "ref": "v0.7.0"}`. Upgrade by changing it in a PR, which runs the eval suite before anyone merges it.
+- [ ] `plugin` in `.opensdlc/config.json`: the OpenSDLC repository and the tag or commit every workflow loads, e.g. `{"repository": "opensdlc-group/opensdlc", "ref": "v0.7.1"}`. Upgrade by changing it in a PR, which runs the eval suite before anyone merges it.
 - [ ] Optional: secret `OPENSDLC_PLUGIN_TOKEN` if the plugin repository `plugin.repository` names is private: a fine-grained token with read access to that repository's contents and nothing else.
 - [ ] Optional: variable `OPENSDLC_KNOWLEDGE_REPO` (`owner/repo` holding shared knowledge, under `knowledge/` or `OPENSDLC_KNOWLEDGE_PATH`) and secret `OPENSDLC_KNOWLEDGE_TOKEN` if that repository is private.
 - [ ] Optional: variable `OPENSDLC_BLOCK_ON_IMPORTANT=true` to fail the review check on Important findings.
