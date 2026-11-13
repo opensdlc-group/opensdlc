@@ -72,13 +72,25 @@ class KnowledgeDoc:
     def skill(self) -> str:
         return self.document.meta.get("skill", "")
 
+    @property
+    def requires(self) -> list[str]:
+        return self.document.listed("requires")
+
+    @property
+    def supersedes(self) -> list[str]:
+        return self.document.listed("supersedes")
+
+    @property
+    def tags(self) -> list[str]:
+        return [t.lower() for t in self.document.listed("tags")]
+
     def reasons(self, signals: "Signals") -> list[str]:
         meta = self.document.meta
         found = []
         if meta.get("always", "").lower() == "true":
             found.append("always applies")
         found += [f"system {s}" for s in self.document.listed("systems") if re.search(rf"\b{re.escape(s.lower())}\b", signals.text)]
-        found += [f"tag {t}" for t in self.document.listed("tags") if t.lower() in signals.tags]
+        found += [f"tag {t}" for t in self.tags if t in signals.tags]
         globs = self.document.listed("paths")
         found += [f"path {f}" for f in signals.files if globs and matches(f, globs)]
         return found
@@ -128,6 +140,55 @@ class Selection:
     pinned: bool
 
 
+@dataclass(frozen=True)
+class Graph:
+    docs: dict[str, KnowledgeDoc]
+
+    @classmethod
+    def of(cls, docs: list[KnowledgeDoc]) -> "Graph":
+        return cls({d.name: d for d in docs})
+
+    @property
+    def replaced(self) -> dict[str, str]:
+        return {old: doc.name for doc in self.docs.values() for old in doc.supersedes}
+
+    def required(self, name: str) -> list[tuple[KnowledgeDoc, str]]:
+        found, seen, queue = [], {name}, [name]
+        while queue:
+            parent = queue.pop(0)
+            for target in self.docs[parent].requires:
+                if target in self.docs and target not in seen and target not in self.replaced:
+                    seen.add(target)
+                    queue.append(target)
+                    found.append((self.docs[target], parent))
+        return found
+
+    def cycle(self, name: str, trail: tuple[str, ...] = ()) -> tuple[str, ...]:
+        if name in trail:
+            return trail[trail.index(name):] + (name,)
+        for target in self.docs[name].requires if name in self.docs else []:
+            found = self.cycle(target, trail + (name,))
+            if found:
+                return found
+        return ()
+
+    def problems(self) -> list[Finding]:
+        found = []
+        for doc in self.docs.values():
+            for link, targets in (("requires", doc.requires), ("supersedes", doc.supersedes)):
+                found += [Finding.error(f"{doc.relpath}: {link} unknown document '{t}'") for t in targets if t not in self.docs]
+            if doc.name in doc.supersedes:
+                found.append(Finding.error(f"{doc.relpath}: a document cannot supersede itself"))
+            found += [Finding.error(f"{doc.relpath}: requires '{t}', which '{self.replaced[t]}' supersedes")
+                      for t in doc.requires if t in self.replaced]
+        loops: dict[frozenset[str], tuple[str, ...]] = {}
+        for name in sorted(self.docs):
+            loop = self.cycle(name)
+            if loop:
+                loops.setdefault(frozenset(loop), loop)
+        return found + [Finding.error(f"knowledge: requires forms a loop: {' → '.join(loop)}") for loop in loops.values()]
+
+
 @dataclass
 class Knowledge:
     root: Path
@@ -151,14 +212,19 @@ class Knowledge:
     def select(self, change: Change, stage: str, extra_files: list[str] | None = None) -> list[Selection]:
         return self.select_signals(Signals.from_change(change, stage, extra_files), stage)
 
+    @property
+    def graph(self) -> Graph:
+        return Graph.of(self.docs)
+
     def select_signals(self, signals: "Signals", stage: str) -> list[Selection]:
-        chosen = [Selection(path, ["read for every stage"], False) for path in self.settings.get("always", []) if (self.root / path).is_file()]
-        for doc in self.docs:
-            if stage in doc.stages:
-                reasons = doc.reasons(signals)
-                if reasons:
-                    chosen.append(Selection(doc.relpath, reasons, True))
-        return chosen
+        always = [Selection(path, ["read for every stage"], False) for path in self.settings.get("always", []) if (self.root / path).is_file()]
+        graph = self.graph
+        matched = {d.name: d.reasons(signals) for d in graph.docs.values() if stage in d.stages and d.name not in graph.replaced}
+        chosen = {graph.docs[name].relpath: reasons for name, reasons in matched.items() if reasons}
+        for name in [n for n, reasons in matched.items() if reasons]:
+            for doc, parent in graph.required(name):
+                chosen.setdefault(doc.relpath, []).append(f"required by {parent}")
+        return always + [Selection(path, reasons, True) for path, reasons in chosen.items()]
 
     def context_for(self, change: Change, kind: str) -> list[str]:
         return [s.path for s in self.select(change, kind) if s.pinned]
@@ -218,11 +284,19 @@ class Knowledge:
         found = [f for doc in self.docs for f in doc.problems(self.today, warn, grace)]
         names = [d.name for d in self.docs]
         found += [Finding.error(f"knowledge: two documents are named '{n}'") for n in sorted({n for n in names if names.count(n) > 1})]
-        return found + self.skill_problems()
+        found += [Finding.error(f"{d.relpath}: tag '{t}' is not in knowledge.tags") for d in self.docs for t in self.unlisted(d.tags)]
+        return found + self.graph.problems() + self.skill_problems()
+
+    def unlisted(self, tags: list[str]) -> list[str]:
+        allowed = {t.lower() for t in self.settings.get("tags", [])}
+        return [t for t in tags if allowed and t not in allowed]
 
     def change_problems(self, change: Change) -> list[Finding]:
         _, unknown = self.concern_owners(change)
-        return [Finding.error(f"{change.id}/spec.md: Concerns cite unknown policy '{name}'") for name in unknown]
+        found = [Finding.error(f"{change.id}/spec.md: Concerns cite unknown policy '{name}'") for name in unknown]
+        intent = change.get("intent")
+        tags = [t.lower() for t in intent.document.listed("tags")] if intent else []
+        return found + [Finding.error(f"{change.id}/intent.md: tag '{t}' is not in knowledge.tags") for t in self.unlisted(tags)]
 
     def manifest(self, change: Change, stage: str, extra_files: list[str] | None = None) -> str:
         return self.render(f"{change.id} at {stage}", self.select(change, stage, extra_files))

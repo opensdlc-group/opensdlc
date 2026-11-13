@@ -22,6 +22,7 @@ OpenSDLC's defaults were each measured with the [bench](../bench/README.md) befo
 | Review leaves building and testing to CI | Refused `make test` and `make build` calls | 5 → 0; cost unchanged |
 | Verify exercises a running app with one command, and the api target starts without a Unix socket | Escalations on api tickets that needed none, per run | 3.7 → 1.3 (−2.3 ± 2.9) |
 | `review.nitCap` is the only nit cap; `REVIEW.md` no longer repeats it as "five" | Cost per review; nits per run | $0.097 → $0.092 (−$0.005 ± $0.009), within noise; 11.3 → 9, never more than 4 in a review |
+| The api and web targets move to vitest 5 and `@hono/node-server` 2, which fix 11 known vulnerabilities | Cost per run; acceptance | Acceptance stayed 100%. Cost within noise on api ($3.15 → $3.02, −$0.12 ± $0.37) and web ($2.78 → $2.83, +$0.05 ± $0.29), and in every stage. The runs alternated between versions, three per target each, because an earlier sequential comparison showed a rise that came from API conditions: time per turn rose in stages that never touch the new packages. |
 
 ## Changes rejected
 
