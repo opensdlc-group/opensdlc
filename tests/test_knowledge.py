@@ -112,6 +112,12 @@ class Links(unittest.TestCase):
         found = {s.path: s for s in self.knowledge().select(self.change, "spec")}
         self.assertEqual(found["docs/adr/0002-tokens.md"].reasons, ["tag claims", "required by secure-api"])
 
+    def test_a_document_reached_twice_through_one_parent_gives_that_reason_once(self):
+        doc(self.root, "docs/adr/0004-rotation.md", {"kind": "decision", "tags": "claims", "requires": "0002-tokens"})
+        found = {s.path: s for s in self.knowledge().select(self.change, "spec")}
+        self.assertEqual(found["docs/adr/0002-tokens.md"].reasons, ["required by secure-api", "required by 0004-rotation"])
+        self.assertEqual(found["docs/adr/0003-keys.md"].reasons, ["required by 0002-tokens"])
+
     def test_sound_links_pass_the_check(self):
         self.assertEqual([m for m in self.messages() if "requires" in m or "supersede" in m], [])
 

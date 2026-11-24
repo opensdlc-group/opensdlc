@@ -9,7 +9,7 @@ Every workflow that runs Claude headlessly, except `@claude`, splits into a read
 **The agent job** has `contents: read` and nothing that writes.
 
 - `actions/checkout` runs with `persist-credentials: false`, so no token sits in `.git/config`.
-- Claude Code runs through one shared step, `.github/actions/opensdlc-agent`, which holds the pinned action and stops the job unless it has exactly one credential.
+- Claude Code runs through one shared step, `.github/actions/opensdlc-agent`, which holds the pinned action and stops the job unless it has exactly one credential. A session that is given a prompt is handed no GitHub token at all.
 - Claude Code runs with `.opensdlc/ci-settings.json`:
   - Bash runs inside the OS sandbox (`bubblewrap` and `socat`, installed by `.github/actions/opensdlc-sandbox`), and Claude Code refuses to start if the sandbox is unavailable.
   - Shell commands cannot see `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN` or the Actions runtime and OIDC tokens.

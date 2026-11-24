@@ -5,7 +5,7 @@ name: OpenSDLC agent
 description: Run one agent session. Every workflow that runs an agent calls this step, so the agent is chosen here and nowhere else.
 inputs:
   prompt:
-    description: What the session is asked to do; empty lets the agent answer the comment that triggered the workflow
+    description: What the session is asked to do. With a prompt the session runs headless, on any event; without one the agent answers the comment that triggered the workflow
     required: false
     default: ""
   plugin:
@@ -25,10 +25,6 @@ inputs:
     default: ""
   tools:
     description: Built-in tools a session with a prompt is offered, and no others
-    required: false
-    default: ""
-  github-token:
-    description: Token the session reads GitHub with; empty uses the agent's own GitHub App
     required: false
     default: ""
   anthropic-api-key:
@@ -56,15 +52,25 @@ runs:
           echo "::error::The ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN secrets are both set. Keep one."
           exit 1
         fi
-    - uses: anthropics/claude-code-action@f3b070c88125d33dbae5653df5f143101d4ea9dc # v1.0.276
+    - if: inputs.prompt != ''
+      uses: anthropics/claude-code-action/base-action@f3b070c88125d33dbae5653df5f143101d4ea9dc # v1.0.276
       with:
         anthropic_api_key: ${{ inputs.anthropic-api-key }}
         claude_code_oauth_token: ${{ inputs.claude-code-oauth-token }}
-        github_token: ${{ inputs.github-token }}
         settings: .opensdlc/ci-settings.json
         prompt: ${{ inputs.prompt }}
         claude_args: >-
           ${{ inputs.plugin && format('--plugin-dir "{0}"', inputs.plugin) || '' }}
           --max-turns ${{ inputs.max-turns }}
           ${{ inputs.model && format('--model {0}', inputs.model) || '' }}
-          ${{ inputs.prompt && format('--allowedTools "{0}" --tools "{1}"', inputs.allowed-tools, inputs.tools) || '' }}
+          --allowedTools "${{ inputs.allowed-tools }}" --tools "${{ inputs.tools }}"
+    - if: inputs.prompt == ''
+      uses: anthropics/claude-code-action@f3b070c88125d33dbae5653df5f143101d4ea9dc # v1.0.276
+      with:
+        anthropic_api_key: ${{ inputs.anthropic-api-key }}
+        claude_code_oauth_token: ${{ inputs.claude-code-oauth-token }}
+        settings: .opensdlc/ci-settings.json
+        claude_args: >-
+          ${{ inputs.plugin && format('--plugin-dir "{0}"', inputs.plugin) || '' }}
+          --max-turns ${{ inputs.max-turns }}
+          ${{ inputs.model && format('--model {0}', inputs.model) || '' }}

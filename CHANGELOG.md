@@ -2,6 +2,22 @@
 
 OpenSDLC follows [Semantic Versioning](https://semver.org). Until 1.0, a minor version can change how a stage behaves; read the notes before you move your pin.
 
+## Unreleased
+
+### Fixed
+
+- No stage started on GitHub after an intent was merged. The advance workflow runs on a push, and the Claude Code action refuses push events. Every session that is given a prompt now runs through the action's `base-action`, which checks neither the event nor who started the run. If you adopted 0.7.1, copy `.github/actions/opensdlc-agent` and the workflows that call it again.
+- The reviewer failed on pull requests the pipeline opened as a GitHub App, because the action refuses a run started by a bot. The same change fixes it.
+- `opensdlc context` listed the same "required by" reason more than once for a document reached through one parent from several selected documents.
+
+### Added
+
+- The advance workflow can be started by hand with a base commit. It runs whatever became due between that commit and the head of the branch, which is how to run a stage again after its run failed.
+
+### Changed
+
+- The shared agent step no longer takes a GitHub token. No headless session used one: each is handed its evidence as files.
+
 ## 0.7.1 (2026-11-13)
 
 ### Added

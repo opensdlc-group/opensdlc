@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
     paths: ["changes/**"]
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Run whatever became due between this commit and the head of the branch
+        required: true
 concurrency:
   group: opensdlc-advance-${{ github.sha }}
 permissions:
@@ -30,11 +35,11 @@ jobs:
         run: python -P -m opensdlc advance --base "$BEFORE" --head "$GITHUB_SHA"
         env:
           PYTHONPATH: .opensdlc/cli
-          BEFORE: ${{ github.event.before }}
+          BEFORE: ${{ inputs.base || github.event.before }}
 
   link:
     needs: due
-    if: needs.due.outputs.linkCount != '0'
+    if: github.event_name == 'push' && needs.due.outputs.linkCount != '0'
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -80,7 +85,6 @@ jobs:
         with:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github-token: ${{ github.token }}
           prompt: /${{ matrix.skill }} ${{ matrix.change }} (${{ matrix.mode }}, headless)
           plugin: ${{ steps.plugin.outputs.dir }}
           max-turns: 80
@@ -130,7 +134,6 @@ jobs:
         with:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github-token: ${{ github.token }}
           prompt: /opensdlc:gate ${{ matrix.change }} ${{ matrix.stage }} (headless)
           plugin: ${{ steps.plugin.outputs.dir }}
           max-turns: ${{ matrix.stage == 'build' && 60 || 40 }}

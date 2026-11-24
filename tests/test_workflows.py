@@ -18,6 +18,9 @@ JOB = re.compile(r"^  ([\w-]+):\n((?:(?:    .*)?\n)*)", re.M)
 WRITE = re.compile(r"^\s+[\w-]+: write$", re.M)
 AGENT = "uses: ./.github/actions/opensdlc-agent"
 INTERACTIVE = {"opensdlc-claude.yml"}
+ANSWERABLE = {"issues", "issue_comment", "pull_request", "pull_request_target", "pull_request_review", "pull_request_review_comment", "workflow_dispatch", "repository_dispatch", "schedule", "workflow_run"}
+TRIGGERS = re.compile(r"^on:\n((?:  .*\n)+)", re.M)
+SESSION = re.compile(r"^    - if: inputs\.prompt (==|!=) ''\n      uses: (anthropics/claude-code-action(?:/base-action)?)@(\w{40}) # (v[\d.]+)\n((?:      .*\n)+)", re.M)
 ALLOWED = re.compile(r'^\s+allowed-tools: "?([^"\n]*)"?$', re.M)
 OFFERED = re.compile(r'^\s+tools: "?([^"\n]*)"?$', re.M)
 CREDENTIALS = {
@@ -32,6 +35,14 @@ INVOCATION = re.compile(r"^\s*(?:run: )?python3? (?P<flags>(?:-\w+ )*)-m opensdl
 def split(path):
     head, body = path.read_text().split("\njobs:\n", 1)
     return head, dict(JOB.findall(body + "\n"))
+
+
+def triggers(head):
+    return set(re.findall(r"^  (\w+):", TRIGGERS.search(head).group(1), re.M))
+
+
+def sessions():
+    return {when: (action, sha, version, inputs) for when, action, sha, version, inputs in SESSION.findall(AGENT_STEP)}
 
 
 def agent_jobs():
@@ -65,7 +76,8 @@ class AgentJobs(unittest.TestCase):
             self.assertIsNone(WRITE.search(head), where)
             self.assertIsNone(WRITE.search(body), where)
             self.assertIn("persist-credentials: false", body, where)
-            self.assertIn("github-token: ${{ github.token }}", body, where)
+            self.assertNotIn("github-token", body, where)
+        self.assertNotIn("github_token", AGENT_STEP)
 
     def test_every_headless_agent_is_offered_only_the_tools_its_permissions_name(self):
         for where, workflow, _, body in agent_jobs():
@@ -87,7 +99,7 @@ class AgentJobs(unittest.TestCase):
         self.assertIn("${{ inputs.model && format('--model {0}', inputs.model) || '' }}", AGENT_STEP)
 
     def test_a_session_with_a_prompt_always_names_its_tools(self):
-        self.assertIn("""${{ inputs.prompt && format('--allowedTools "{0}" --tools "{1}"', inputs.allowed-tools, inputs.tools) || '' }}""", AGENT_STEP)
+        self.assertIn("""--allowedTools "${{ inputs.allowed-tools }}" --tools "${{ inputs.tools }}"\n""", sessions()["!="][-1])
         for where, _, _, body in agent_jobs():
             self.assertEqual("prompt: " in body, where.split(":")[0] not in INTERACTIVE, where)
 
@@ -141,7 +153,27 @@ class OneAgentStep(unittest.TestCase):
     def test_only_the_shared_step_names_the_agent_it_runs(self):
         named = [path.name for path in WORKFLOWS.glob("*.yml") if "claude-code-action" in path.read_text()]
         self.assertEqual(named, [])
-        self.assertEqual(AGENT_STEP.count("uses: anthropics/claude-code-action@"), 1)
+        self.assertEqual(AGENT_STEP.count("uses: anthropics/claude-code-action"), 2)
+        self.assertEqual(len({(sha, version) for _, _, sha, version, _ in SESSION.findall(AGENT_STEP)}), 1)
+
+    def test_a_session_with_a_prompt_runs_on_any_event_and_for_any_actor(self):
+        headless, answering = sessions()["!="], sessions()["=="]
+        self.assertEqual(headless[0], "anthropics/claude-code-action/base-action")
+        self.assertIn("prompt: ${{ inputs.prompt }}\n", headless[-1])
+        self.assertEqual(answering[0], "anthropics/claude-code-action")
+        self.assertNotIn("prompt:", answering[-1])
+
+    def test_a_session_without_a_prompt_starts_only_on_events_the_agent_can_answer(self):
+        for where, workflow, head, body in agent_jobs():
+            if "prompt: " not in body:
+                self.assertLessEqual(triggers(head), ANSWERABLE, where)
+
+    def test_a_stage_can_be_run_again_from_a_base_commit(self):
+        head, jobs = split(WORKFLOWS / "opensdlc-advance.yml")
+        self.assertEqual(triggers(head), {"push", "workflow_dispatch"})
+        self.assertRegex(head, r"  workflow_dispatch:\n    inputs:\n      base:\n(?:        .*\n)*        required: true\n")
+        self.assertIn("BEFORE: ${{ inputs.base || github.event.before }}", jobs["due"])
+        self.assertIn("if: github.event_name == 'push' && ", jobs["link"])
 
     def test_every_session_is_handed_every_credential_the_step_accepts(self):
         for where, _, _, body in agent_jobs():
