@@ -223,7 +223,9 @@ class Knowledge:
         chosen = {graph.docs[name].relpath: reasons for name, reasons in matched.items() if reasons}
         for name in [n for n, reasons in matched.items() if reasons]:
             for doc, parent in graph.required(name):
-                chosen.setdefault(doc.relpath, []).append(f"required by {parent}")
+                reasons = chosen.setdefault(doc.relpath, [])
+                if f"required by {parent}" not in reasons:
+                    reasons.append(f"required by {parent}")
         return always + [Selection(path, reasons, True) for path, reasons in chosen.items()]
 
     def context_for(self, change: Change, kind: str) -> list[str]:
