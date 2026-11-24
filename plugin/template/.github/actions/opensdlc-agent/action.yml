@@ -53,7 +53,7 @@ runs:
           exit 1
         fi
     - if: inputs.prompt != ''
-      uses: anthropics/claude-code-action/base-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
+      uses: anthropics/claude-code-action/base-action@f3b070c88125d33dbae5653df5f143101d4ea9dc # v1.0.276
       with:
         anthropic_api_key: ${{ inputs.anthropic-api-key }}
         claude_code_oauth_token: ${{ inputs.claude-code-oauth-token }}
@@ -65,7 +65,7 @@ runs:
           ${{ inputs.model && format('--model {0}', inputs.model) || '' }}
           --allowedTools "${{ inputs.allowed-tools }}" --tools "${{ inputs.tools }}"
     - if: inputs.prompt == ''
-      uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
+      uses: anthropics/claude-code-action@f3b070c88125d33dbae5653df5f143101d4ea9dc # v1.0.276
       with:
         anthropic_api_key: ${{ inputs.anthropic-api-key }}
         claude_code_oauth_token: ${{ inputs.claude-code-oauth-token }}
