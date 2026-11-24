@@ -44,3 +44,11 @@ At the current release every target passes every acceptance check on every run:
 | web | $2.77 |
 
 The bench is one small product in four stacks. Treat these as evidence that a change helps or hurts, not as what your repository will cost.
+
+## What the bench does not cover
+
+The bench starts each stage with the CLI. It never receives a GitHub event, so it cannot show whether a workflow starts when it should.
+
+Release 0.7.1 shipped with that gap. On the first real repository, merging an intent started nothing: the advance workflow runs on a push, and the agent's action refused push events. It also refused the reviewer on pull requests the pipeline had opened as a GitHub App.
+
+The fix was run on that repository before it was released. A merged intent started the spec stage, the App opened the spec pull request, the reviewer ran on it, and merging the spec started the plan stage from a push. `tests/test_workflows.py` now fails if a session with a prompt can reach the action that checks events, or if a session without one can start on an event the action cannot answer.

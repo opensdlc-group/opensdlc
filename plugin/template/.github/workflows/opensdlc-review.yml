@@ -47,7 +47,6 @@ jobs:
         with:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github-token: ${{ github.token }}
           prompt: /opensdlc:review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} (headless)
           plugin: ${{ steps.plugin.outputs.dir }}
           max-turns: 60
